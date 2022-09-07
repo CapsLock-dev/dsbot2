@@ -23,12 +23,18 @@ export class StandUser {
             this.buttonHandler(i)
         })
         this.sendMenu()
+        for (const stand of stands) {
+            stand.user = this
+        }
     }
     buttonHandler(i: ButtonInteraction) {
         switch (i.customId) {
             case '':
 
         }
+    }
+    async swap(reason: string) {
+
     }
     async sendMenu() {
         const emb = new EmbedBuilder()
