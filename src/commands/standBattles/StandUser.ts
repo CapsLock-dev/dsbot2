@@ -9,8 +9,9 @@ export class StandUser {
     dm: DMChannel
     collector: InteractionCollector<ButtonInteraction<CacheType>>
     ready: boolean = false
-    chosenSpell: Skill | null = null
+    chosenSpell: Skill[] | null = null
     chosenStand: Stand | null = null
+    chosenMove: 'Skill' | 'Swap' | 'Run' | 'Idle' = 'Idle'
     freezed: number = 0
     message!: Message
     constructor(member: GuildMember, stands: Stand[], dm: DMChannel, fight: Fight) {
@@ -55,6 +56,6 @@ export class StandUser {
                     .setLabel('Сдаться')
                     .setStyle(ButtonStyle.Primary)
             )
-        this.message = await this.dm.send({components: [buttons], embeds: [emb]})
+        this.message = await this.dm.send({ components: [buttons], embeds: [emb] })
     }
 }

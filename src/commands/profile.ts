@@ -1,6 +1,6 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js"
+import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, GuildMember } from "discord.js"
 import { Command } from "../interfaces"
-import { addUser, getBalance, updateBalance } from "../db"
+import { addUser, getBalance, getInventory, updateBalance } from "../db"
 
 export const command: Command = {
     data: new SlashCommandBuilder()
@@ -8,5 +8,11 @@ export const command: Command = {
         .setDescription('profile'),
     exec: async (client, interaction: ChatInputCommandInteraction) => {
         if (!interaction.member) return
+        const member = interaction.member as GuildMember
+        const inv = await getInventory(client.pool, member.id)
+        const emb = new EmbedBuilder()
+            .setTitle(member.displayName)
+            .setDescription(`Значки: ${inv.badges.join(' ')}`)
+            .setFields({name: '', value: ''})
     }
 }

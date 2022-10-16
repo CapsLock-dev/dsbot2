@@ -1,9 +1,12 @@
+import { kMaxLength } from "buffer"
+import { link } from "fs"
+import { getLineAndCharacterOfPosition } from "typescript"
 import { Fight } from "./Fight"
 import { SilverChariot } from "./stands/SilverChariot"
 import { Starplatinum as StarPlatinum } from "./stands/StarPlatinum"
 import { StandUser } from "./StandUser"
 
-export class Stand {
+export abstract class Stand {
     name!: keyof typeof standList
     maxhp!: number
     lvl!: number
@@ -11,18 +14,19 @@ export class Stand {
     speed!: number
     defence!: number
     damage!: number
-    range!: number
     expPerLvl!: number
     status!: BattleStatus | null
     skills!: Map<Number, Skill>
     usedSkills!: Array<Skill>
     user!: StandUser
+    ability!: Ability
+    infoForAi!: InfoForAi
+    ownerId!: string
     startFight() {
         this.status = {
             hp: this.maxhp,
             speed: this.speed,
             defence: this.defence,
-            range: this.range,
             damage: this.damage,
             effect: null,
             buff: null,
@@ -32,9 +36,9 @@ export class Stand {
     addExp(exp: number) {
 
     }
-    dealDamage(value: number, ignoreDef: boolean) {
+    editHp(value: number, ignoreDef: boolean) {
         if (!ignoreDef) {
-            value -= value * this.defence / 100            
+            value -= value * this.defence / 100
         }
         if (this.status!.hp - value > 0) {
             this.status!.hp -= value
@@ -44,16 +48,28 @@ export class Stand {
         }
     }
     editDefence(value: number) {
-
-    }
-    editRange(value: number) {
-
+        if (this.status!.defence + value < 0) {
+            this.status!.defence = 0
+        } else {
+            this.status!.defence += value
+        }
     }
     editDamage(value: number) {
-
+        if (this.status!.damage + value < 0) {
+            this.status!.damage = 0
+        } else {
+            this.status!.damage += value
+        }
     }
     editSpeed(value: number) {
-
+        if (this.status!.speed + value < 0) {
+            this.status!.speed = 0
+        } else {
+            this.status!.speed += value
+        }
+    }
+    getOwner(fight: Fight) {
+        return fight.anotherPlayer(this.ownerId)
     }
 }
 export interface BattleStatus {
@@ -61,15 +77,41 @@ export interface BattleStatus {
     speed: number,
     damage: number,
     defence: number,
-    range: number,
     effect: Effect | null,
     buff: Effect | null,
     cooldowns: Array<{ skill: Skill, cd: number }>
 }
 
+export interface InfoForAi {
+    readonly counterStands: Stand[],
+    readonly role: StandRole,
+    readonly style: StandStyle
+}
+
+export enum StandRole {
+    Support, Tank, Carry
+}
+
+export enum StandStyle {
+    DamageDealer,
+    Debuffer,
+    Buffer,
+    Killer,
+    Disabler,
+    Procast,
+    Exchange
+}
+
 export interface Effect {
     readonly name: string,
-    duration: number
+    duration: number,
+    user: Function
+}
+
+export interface GlobalEffect {
+    readonly name: string,
+    duration: number,
+    use: Function
 }
 
 export interface Skill {
@@ -77,7 +119,10 @@ export interface Skill {
     readonly cooldown: number,
     readonly use: Function,
     readonly description: string,
-    readonly type: SkillType
+    readonly type: SkillType,
+    readonly multi: boolean,
+    readonly damage: number,
+    readonly target: boolean,
 }
 
 export enum SkillType {
@@ -88,6 +133,16 @@ export const defaultValues = {
     expPerLvl: 100,
 }
 export const standList = {
-    'Star Platinum': StarPlatinum,
     'Silver Chariot': SilverChariot
+}
+export interface Ability {
+    readonly type: AbilityType,
+    readonly use: Function | undefined,
+    readonly name: string,
+    readonly description: string,
+    active: boolean
+}
+
+export enum AbilityType { 
+    Battlecry, Passive, Deathcry
 }

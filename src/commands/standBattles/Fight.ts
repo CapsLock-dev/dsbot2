@@ -15,4 +15,11 @@ export class Fight {
     readyCheck() {
 
     }
+    anotherPlayer(player: StandUser | string) {
+        if (player instanceof StandUser) {
+            return [this.p1, this.p2].filter(user => user != player)[0]
+        } else {
+            return [this.p1, this.p2].filter(user => user.member.id != player)[0]
+        }
+    }
 }

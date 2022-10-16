@@ -63,7 +63,7 @@ export async function getStands(pool: Pool, id: string): Promise<Stand[]> {
     const stands = await pool.query(`SELECT * FROM stands WHERE id='${id}'`)
     const array: Stand[] = []
     for (const stand of stands.rows as Stand[]) {
-        array.push(new standList[stand.name](stand.maxhp, stand.lvl, stand.exp, stand.speed, stand.defence, stand.damage, stand.range, stand.expPerLvl, stand.usedSkills))
+        array.push(new standList[stand.name](stand.maxhp, stand.lvl, stand.exp, stand.speed, stand.defence, stand.damage, stand.expPerLvl, stand.usedSkills))
     }
     return array
 }
