@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, ActionRowBuilder, SelectMenuBuilder, GuildMember, SelectMenuInteraction, Role } from "discord.js"
 import { Command } from "../interfaces"
-import { addChannelInv, addUser, getBalance, getInventory, updateBalance } from "../db"
+import { addChannelInv, addStand, addUser, getBalance, getInventory, getStands, updateBalance, updateStand } from "../db"
+import { standList } from "./standBattles/Stand"
 
 export const command: Command = {
     data: new SlashCommandBuilder()
@@ -19,7 +20,8 @@ export const command: Command = {
                     .setMinValues(1)
                     .setPlaceholder('Выберите, чтобы купить')
                     .addOptions([{ label: 'Текстовый канал', description: 'Цена: 6000', value: 'text' },
-                    { label: 'Стрела', description: 'Цена: 10000', value: 'arrow' }])
+                    { label: 'Стрела', description: 'Цена: 10000', value: 'arrow' },
+                    { label: 'Легендарная стрела', description: 'Цена: 1000000', value: 'legendary_arrow' }])
             )
         const message = await interaction.reply({ components: [menu], embeds: [emb], fetchReply: true })
         const collector = message.createMessageComponentCollector({ time: 60000 * 5 })
@@ -43,6 +45,26 @@ export const command: Command = {
                     break;
 
                 case 'arrow':
+                    if (await getBalance(client.pool, member.id) >= 10000) {
+                        const userStands = await getStands(client.pool, member.id)
+                        const stands = Object.keys(standList)
+                        
+                        stands.filter((standName => {
+                            for (const stand of userStands) {
+                                if (stand.name === standName) return false
+                            }
+                            return true
+                        }))
+                        if (stands.length == 0) {
+                            i.reply({ content: 'У вас уже есть все стенды', ephemeral: true })
+                        } else {
+                            const standName = stands[Math.round(Math.random() * stands.length-1)]
+                            const stand = new standList[standName as keyof typeof standList]
+                            await updateBalance(client.pool, member.id, await getBalance(client.pool, member.id) - 10000)
+                            await addStand(client.pool, member.id, stand)
+                            i.reply({content: 'Вы получили: ' + standName, ephemeral: true})
+                        }
+                    }
                     break;
             }
         })

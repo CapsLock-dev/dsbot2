@@ -16,12 +16,13 @@ export abstract class Stand {
     damage!: number
     expPerLvl!: number
     status!: BattleStatus | null
-    skills!: Map<Number, Skill>
+    skills!: Map<Number, Array<Skill>>
     usedSkills!: Array<Skill>
     user!: StandUser
     ability!: Ability
     infoForAi!: InfoForAi
     ownerId!: string
+    gifLink!: string
     startFight() {
         this.status = {
             hp: this.maxhp,
@@ -34,7 +35,23 @@ export abstract class Stand {
         }
     }
     addExp(exp: number) {
-
+        if (this.exp + exp >= this.expPerLvl) {
+            this.exp += exp - this.expPerLvl
+            this.expPerLvl = defaultValues.expPerLvlMultiplier
+        } else {
+            this.exp += exp
+        }
+    }
+    setupSkills(skillNames: Array<string>) {
+        for (const key of [...this.skills.keys()]) {
+            const skills = this.skills.get(key) as Skill[]
+            skills.forEach(el => {
+                if (skillNames.includes(el.name)) {
+                    skillNames.splice(skillNames.indexOf(el.name), 1)
+                    this.usedSkills.push(el)
+                }
+            });
+        }
     }
     editHp(value: number, ignoreDef: boolean) {
         if (!ignoreDef) {
@@ -69,7 +86,7 @@ export abstract class Stand {
         }
     }
     getOwner(fight: Fight) {
-        return fight.anotherPlayer(this.ownerId)
+        return fight.anotherPlayer(fight.anotherPlayer(this.ownerId))
     }
 }
 export interface BattleStatus {
@@ -83,7 +100,7 @@ export interface BattleStatus {
 }
 
 export interface InfoForAi {
-    readonly counterStands: Stand[],
+    readonly counterStands: Array<keyof typeof standList>,
     readonly role: StandRole,
     readonly style: StandStyle
 }
@@ -117,12 +134,13 @@ export interface GlobalEffect {
 export interface Skill {
     readonly name: string,
     readonly cooldown: number,
-    readonly use: Function,
+    readonly use: (fight: Fight, stand: Stand)=>void,
     readonly description: string,
     readonly type: SkillType,
-    readonly multi: boolean,
     readonly damage: number,
-    readonly target: boolean,
+    readonly multi?: boolean,
+    readonly target?: boolean,
+    readonly counterAttack?: boolean
 }
 
 export enum SkillType {
@@ -131,6 +149,7 @@ export enum SkillType {
 
 export const defaultValues = {
     expPerLvl: 100,
+    expPerLvlMultiplier: 100
 }
 export const standList = {
     'Silver Chariot': SilverChariot
@@ -143,6 +162,6 @@ export interface Ability {
     active: boolean
 }
 
-export enum AbilityType { 
+export enum AbilityType {
     Battlecry, Passive, Deathcry
 }

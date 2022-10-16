@@ -5,7 +5,7 @@ import { addUser, getBalance, updateBalance } from "../db"
 export const command: Command = {
     data: new SlashCommandBuilder()
         .setName('mute')
-        .setDescription('Мут. КД: 60 сек.')
+        .setDescription('Мут. КД: 60 сек. Цена: 10 за сек')
         .addUserOption(option => option.setName('user').setDescription('Цель').setRequired(true))
         .addNumberOption(option => option.setName('time').setDescription('Время в секундах. Стоимость: 10 за сек.').setRequired(true)),
     exec: async (client, interaction: ChatInputCommandInteraction) => {

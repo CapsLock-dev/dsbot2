@@ -1,4 +1,4 @@
-import { ButtonInteraction, GuildMember, InteractionCollector, CacheType, DMChannel, ComponentType, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Message } from 'discord.js'
+import { ButtonInteraction, GuildMember, InteractionCollector, CacheType, DMChannel, ComponentType, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Message, SelectMenuBuilder, SelectMenuInteraction } from 'discord.js'
 import { Fight } from './Fight';
 import { Skill, Stand } from './Stand';
 
@@ -7,7 +7,7 @@ export class StandUser {
     readonly stands: Stand[]
     readonly fight: Fight
     dm: DMChannel
-    collector: InteractionCollector<ButtonInteraction<CacheType>>
+    collector: InteractionCollector<ButtonInteraction<CacheType> | SelectMenuInteraction<CacheType>>
     ready: boolean = false
     chosenSpell: Skill[] | null = null
     chosenStand: Stand | null = null
@@ -19,27 +19,72 @@ export class StandUser {
         this.stands = stands
         this.fight = fight
         this.dm = dm
-        this.collector = dm.createMessageComponentCollector({ componentType: ComponentType.Button })
+        this.collector = dm.createMessageComponentCollector()
         this.collector.on('collect', async (i: ButtonInteraction) => {
             this.buttonHandler(i)
         })
-        this.sendMenu()
+        this.init()
         for (const stand of stands) {
             stand.user = this
         }
     }
-    buttonHandler(i: ButtonInteraction) {
-        switch (i.customId) {
-            case '':
-
+    async init() {
+        const options = []
+        for (let i = 0; i < 4; i++) {
+            const stand = this.stands[i]
+            options.push({ label: stand.name, description: `Lvl: ${stand.lvl}`, value: i.toString() })
+        }
+        const emb = new EmbedBuilder()
+            .setTitle('Битва')
+        const menu: any = new ActionRowBuilder()
+            .addComponents(
+                new SelectMenuBuilder()
+                    .setCustomId('start_stand')
+                    .setMaxValues(1)
+                    .setMinValues(1)
+                    .setPlaceholder('Выберите стартового стенда')
+                    .addOptions(options)
+            )
+        this.message = await this.dm.send({ components: [menu], embeds: [emb] })
+    }
+    buttonHandler(i: ButtonInteraction | SelectMenuInteraction) {
+        switch (i.componentType) {
+            case ComponentType.Button:
+                break
+            case ComponentType.SelectMenu:
+                break
         }
     }
     async swap(reason: string) {
 
     }
-    async sendMenu() {
+    async run() {
+        
+    }
+    async setAttackMenu() {
         const emb = new EmbedBuilder()
-            .setTitle('Fight')
+            .setTitle('Атака')
+        const menu: any = new ActionRowBuilder()
+            .addComponents(
+                new SelectMenuBuilder()
+                    .setCustomId('attack_menu')
+                    .setMaxValues(1)
+                    .setMinValues(1)
+                    .setPlaceholder('Выберите действие')
+                    .addOptions()
+            )
+        for (let i = 0; i < 4; i++) {
+            menu.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(i.toString())
+                    .setLabel(this.chosenStand!.usedSkills[i].name)
+                    .setStyle(ButtonStyle.Primary)
+            )
+        }
+    }
+    async setMainMenu() {
+        const emb = new EmbedBuilder()
+            .setTitle('Битва')
             .setDescription('Выберите действие')
         const buttons: any = new ActionRowBuilder()
             .addComponents(
@@ -56,6 +101,6 @@ export class StandUser {
                     .setLabel('Сдаться')
                     .setStyle(ButtonStyle.Primary)
             )
-        this.message = await this.dm.send({ components: [buttons], embeds: [emb] })
+        await this.message.edit({ components: [buttons], embeds: [emb] })
     }
 }

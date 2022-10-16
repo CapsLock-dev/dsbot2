@@ -62,8 +62,8 @@ export async function addChannelInv(pool: Pool, id: string, channelId: string) {
 export async function getStands(pool: Pool, id: string): Promise<Stand[]> {
     const stands = await pool.query(`SELECT * FROM stands WHERE id='${id}'`)
     const array: Stand[] = []
-    for (const stand of stands.rows as Stand[]) {
-        array.push(new standList[stand.name](stand.maxhp, stand.lvl, stand.exp, stand.speed, stand.defence, stand.damage, stand.expPerLvl, stand.usedSkills))
+    for (const stand of stands.rows) {
+        array.push(new standList[stand.name as keyof typeof standList](stand.maxhp, stand.lvl, stand.exp, stand.speed, stand.defence, stand.damage, stand.expPerLvl, stand.usedSkills))
     }
     return array
 }
