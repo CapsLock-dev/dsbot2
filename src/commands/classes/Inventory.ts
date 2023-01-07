@@ -1,16 +1,17 @@
 export class Inventory {
-    roles: string[] = []
-    channels: string[] = []
-    badges: string[] = []
-    array: string[][] = []
-    constructor(array: string[][]) {
-        const newArr: string[][] = []
-        for (const arr of array) {
-            newArr.push(arr.filter(el=>el!=''))
-        }
-        this.array = newArr
-        this.roles = newArr[0]
-        this.channels = newArr[1]
-        this.badges = newArr[2]
+    array: string[] = []
+    constructor(array: string[]) {
+        this.array = array
+    }
+    filterArray(filter: PossibleItems) {
+        filter += ':'
+        return this.array.filter(el => {return el.startsWith(filter)}).map((el) => {
+            return el.slice(filter.length)
+        })
+    }
+    push(el: string) {
+        this.array.push(el)
     }
 }
+
+export type PossibleItems = 'roles' | 'channels' | 'badges'

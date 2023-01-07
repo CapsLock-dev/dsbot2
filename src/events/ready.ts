@@ -12,6 +12,8 @@ export const event: Event = {
                 addUser(client.pool, member[1].id)
                 client.cooldowns.set(member[1].id, new CooldownController())
             }
+            console.log('Running on guild: ' + guild[1].name)
+
         }
         console.log('Bot is ready!')
     }

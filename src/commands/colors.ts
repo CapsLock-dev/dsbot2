@@ -1,18 +1,31 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, GuildMember, APISelectMenuOption, SelectMenuInteraction, ActionRowBuilder, SelectMenuBuilder, EmbedBuilder, Guild, ButtonInteraction, ComponentType, ButtonBuilder, ButtonStyle, Role, Message } from "discord.js"
+import { SlashCommandBuilder, ChatInputCommandInteraction, GuildMember, APISelectMenuOption, SelectMenuInteraction, ActionRowBuilder, SelectMenuBuilder, EmbedBuilder, Guild, ButtonInteraction, ComponentType, ButtonBuilder, ButtonStyle, Role, Message, ColorResolvable } from "discord.js"
 import { Command } from "../interfaces"
-import { addUser, getBalance, updateBalance, getInventory, addRoleInv } from "../db"
-import { colors } from "./data/colors"
+import { addUser, getBalance, updateBalance, getInventory, addElementInv} from "../db"
+import { Inventory } from "./classes/Inventory"
+
+const hexColors = [{ name: 'Pale Violet', hex: '#A387D7' }]
 
 export const command: Command = {
     data: new SlashCommandBuilder()
         .setName('colors')
         .setDescription('Цвета'),
     exec: async (client, interaction: ChatInputCommandInteraction) => {
+        const colors: Array<{name: string, id: string}> = []
+        hexColors.forEach(async (hexColor) => {
+            for (const guildRole of interaction.guild!.roles.cache) {
+                if (guildRole[1].name === hexColor.name) {
+                    colors.push({name: hexColor.name, id: guildRole[1].id})
+                    break
+                }
+            }
+            const newRole = await interaction.guild!.roles.create({name: hexColor.name, color: hexColor.hex as ColorResolvable, reason: "doesn't exists"})
+            colors.push({name: hexColor.name, id: newRole.id})
+        })
         async function updateShopMenu() {
             const colorList: APISelectMenuOption[] = []
-            const buyedRoles: string[] = (await getInventory(client.pool, member.id)).roles
+            const buyedRoles: string[] = (await getInventory(client.pool, member.id)).filterArray('roles')
             for (const role of colors) {
-                const description = buyedRoles.includes(role.id) ? 'Куплено' : 'Цена: 5000'
+                const description =  !buyedRoles || buyedRoles.includes(role.id) ? 'Куплено' : 'Цена: 5000'
                 colorList.push({ label: role.name, description: description, value: role.id });
             }
             const shopMenuEmb = new EmbedBuilder()
@@ -41,7 +54,7 @@ export const command: Command = {
         colors.map((el) => {
             roleList.push(el.id)
         })
-        const buyedRoles: string[] = (await getInventory(client.pool, member.id)).roles
+        const buyedRoles: string[] = (await getInventory(client.pool, member.id)).filterArray('roles')
         let shopMenuMsg = await updateShopMenu()
         const message = await interaction.reply(shopMenuMsg) as unknown as Message
         let chosenRole: Role
@@ -54,11 +67,11 @@ export const command: Command = {
                     switch (i.customId) {
                         case 'buy':
                             const bal = await getBalance(client.pool, member.id)
-                            if (!(await getInventory(client.pool, member.id)).roles.includes(chosenRole.id)) {
+                            if (!buyedRoles || !buyedRoles.includes(chosenRole.id)) {
                                 if (bal > 5000) {
                                     await updateBalance(client.pool, member.id, bal - 5000)
                                     if (!member.roles.cache.find(r => r.id === chosenRole.id)) member.roles.add(chosenRole)
-                                    addRoleInv(client.pool, member.id, chosenRole.id)
+                                    addElementInv(client.pool, member.id, 'roles', chosenRole.id)
                                     i.reply({ content: `Вы купили роль ` + chosenRole.name, ephemeral: true })
                                     shopMenuMsg = await updateShopMenu()
                                     message.edit(shopMenuMsg)
@@ -75,8 +88,9 @@ export const command: Command = {
                                 member.roles.add(chosenRole)
                                 const roleToRemove = chosenRole
                                 setTimeout(async () => {
+                                    const buyedRoles = (await getInventory(client.pool, member.id)).filterArray('roles')
                                     if (member.roles.cache.find(role => role.id === roleToRemove.id) &&
-                                        !(await getInventory(client.pool, member.id)).roles.includes(roleToRemove.id)) {
+                                        (!buyedRoles || !buyedRoles.includes(roleToRemove.id))) {
                                         member.roles.remove(roleToRemove)
                                     }
                                 }, 15000)
@@ -95,8 +109,11 @@ export const command: Command = {
 
                 case ComponentType.SelectMenu:
                     let colorRoleId = i.values[0]
-                    const userRoles = (await getInventory(client.pool, member.id)).roles
-                    if (!userRoles.includes(colorRoleId)) {
+                    const userRoles = (await getInventory(client.pool, member.id)).filterArray('roles')
+                    console.log('Есть ли роль? ')
+                    console.log(userRoles)
+                    console.log((await getInventory(client.pool, member.id)).array)
+                    if (!userRoles || !userRoles.includes(colorRoleId)) {
                         chosenRole = await i.guild?.roles.fetch(colorRoleId) as Role
                         if (!chosenRole) {
                             message.reply({ content: `Colors error: ${colorRoleId} doesn't exists` })
@@ -122,7 +139,9 @@ export const command: Command = {
                             .setDescription('Цвет: <@&' + colorRoleId + '>\nЦена: 5000')
                         const roleMenuMsg = { components: [roleMenu], embeds: [roleMenuEmb] }
                         message.edit(roleMenuMsg)
-                    }
+                    } else {
+                        i.reply({ content: 'У вас уже есть эта роль', ephemeral: true })
+                    } 
                     break
             }
         })

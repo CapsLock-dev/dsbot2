@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, ActionRowBuilder, SelectMenuBuilder, GuildMember, SelectMenuInteraction, Role } from "discord.js"
 import { Command } from "../interfaces"
-import { addChannelInv, addStand, addUser, getBalance, getInventory, getStands, updateBalance, updateStand } from "../db"
-import { standList } from "./standBattles/Stand"
+import { addElementInv, addStand, addUser, getBalance, getInventory, getStands, updateBalance, updateStand } from "../db"
+import { standList } from "./standBattles/data" 
 
 export const command: Command = {
     data: new SlashCommandBuilder()
@@ -30,15 +30,19 @@ export const command: Command = {
             switch (i.values[0]) {
                 case 'text':
                     if (await getBalance(client.pool, member.id) >= 6000) {
-                        const everyone = member.guild.roles.cache.find(r => r.name === '@everyone') as Role
-                        const channel = await member.guild.channels.create({
-                            name: member.user.username,
-                            parent: '1016804550788776076',
-                            permissionOverwrites: [{ id: everyone.id, deny: ['ViewChannel'] }, { id: member.id, allow: ['ViewChannel'] }]
-                        })
-                        addChannelInv(client.pool, member.id, channel.id)
-                        await updateBalance(client.pool, member.id, await getBalance(client.pool, member.id) - 6000)
-                        i.reply({ content: 'Канал создан', ephemeral: true })
+                        try {
+                            const everyone = member.guild.roles.cache.find(r => r.name === '@everyone') as Role
+                            const channel = await member.guild.channels.create({
+                                name: member.user.username,
+                                parent: '1039149287524806688',
+                                permissionOverwrites: [{ id: everyone.id, deny: ['ViewChannel'] }, { id: member.id, allow: ['ViewChannel'] }]
+                            })
+                            addElementInv(client.pool, member.id, 'channels', channel.id)
+                            await updateBalance(client.pool, member.id, await getBalance(client.pool, member.id) - 6000)
+                            i.reply({ content: 'Канал создан', ephemeral: true })
+                        } catch (e) {
+                            i.reply( {content: 'Недостаточно прав', ephemeral: true} )
+                        }
                     } else {
                         i.reply({ content: 'У вас недостаточно средств', ephemeral: true })
                     }

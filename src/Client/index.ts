@@ -4,7 +4,7 @@ import { Pool } from 'pg'
 
 const pgClient = new Pool({
     host: 'localhost',
-    user: 'caps',
+    user: 'capslock',
     password: '',
     database: 'mydb',
     port: 5432

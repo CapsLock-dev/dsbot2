@@ -9,7 +9,7 @@ export class StandUser {
     dm: DMChannel
     collector: InteractionCollector<ButtonInteraction<CacheType> | SelectMenuInteraction<CacheType>>
     ready: boolean = false
-    chosenSpell: Skill[] | null = null
+    chosenSpell: Skill | null = null
     chosenStand: Stand | null = null
     chosenMove: 'Skill' | 'Swap' | 'Run' | 'Idle' = 'Idle'
     freezed: number = 0
@@ -20,8 +20,8 @@ export class StandUser {
         this.fight = fight
         this.dm = dm
         this.collector = dm.createMessageComponentCollector()
-        this.collector.on('collect', async (i: ButtonInteraction) => {
-            this.buttonHandler(i)
+        this.collector.on('collect', async (i: ButtonInteraction | SelectMenuInteraction) => {
+            this.menuHandler(i)
         })
         this.init()
         for (const stand of stands) {
@@ -36,6 +36,7 @@ export class StandUser {
         }
         const emb = new EmbedBuilder()
             .setTitle('Битва')
+            .setThumbnail('https://media.discordapp.net/attachments/966392406662586458/1041374682072490045/unknown.png?width=649&height=618')
         const menu: any = new ActionRowBuilder()
             .addComponents(
                 new SelectMenuBuilder()
@@ -47,21 +48,64 @@ export class StandUser {
             )
         this.message = await this.dm.send({ components: [menu], embeds: [emb] })
     }
-    buttonHandler(i: ButtonInteraction | SelectMenuInteraction) {
+    menuHandler(i: ButtonInteraction | SelectMenuInteraction) {
         switch (i.componentType) {
             case ComponentType.Button:
                 break
             case ComponentType.SelectMenu:
+                switch (i.customId) {
+                    case 'start_stand':
+                        this.chosenStand = this.stands[parseInt(i.values[0])]
+                        this.sendAttackMenu()
+                        break
+                    case 'swap_stand':
+                        this.chosenStand = this.stands[parseInt(i.values[0])]
+                        break
+                    case 'attack_menu':
+                        const chosenSkill = this.chosenStand?.usedSkills[parseInt(i.values[0])] as Skill
+                        if (this.chosenStand?.getCooldown(chosenSkill) == 0) {
+                            this.chosenSpell = chosenSkill
+                        } else {
+                            i.reply('Этот скилл находится в кд')
+                        }
+                }
                 break
         }
     }
-    async swap(reason: string) {
-
+    async sendSwapMenu(dead: boolean) {
+        await this.message.delete()
+        const options = []
+        for (let i = 0; i < 4; i++) {
+            const stand = this.stands[i]
+            if (stand.status?.hp != 0) {
+                options.push({ label: stand.name, description: `Lvl: ${stand.lvl}`, value: i.toString() })
+            }
+        }
+        const emb = new EmbedBuilder()
+            .setTitle('Битва')
+            .setThumbnail('https://media.discordapp.net/attachments/966392406662586458/1041374682072490045/unknown.png?width=649&height=618')
+        const menu: any = new ActionRowBuilder()
+            .addComponents(
+                new SelectMenuBuilder()
+                    .setCustomId('swap_stand')
+                    .setMaxValues(1)
+                    .setMinValues(1)
+                    .setPlaceholder('Выберите стенд')
+                    .addOptions(options)
+            )
+        this.message = await this.dm.send({ components: [menu], embeds: [emb] })
     }
     async run() {
-        
+       this.fight.end('run', this) 
     }
-    async setAttackMenu() {
+    async sendAttackMenu() {
+        await this.message.delete()
+        const options = []
+        const stand = this.chosenStand as Stand
+        for (let i = 0; i < stand.usedSkills.length; i++) {
+            const skill = stand.usedSkills[i]
+            options.push({label: skill.name, description: `КД: ${stand.getCooldown(skill)}`, value: i.toString()})
+        }
         const emb = new EmbedBuilder()
             .setTitle('Атака')
         const menu: any = new ActionRowBuilder()
@@ -70,19 +114,13 @@ export class StandUser {
                     .setCustomId('attack_menu')
                     .setMaxValues(1)
                     .setMinValues(1)
-                    .setPlaceholder('Выберите действие')
-                    .addOptions()
+                    .setPlaceholder('Выберите скилл')
+                    .addOptions(options)
             )
-        for (let i = 0; i < 4; i++) {
-            menu.addComponents(
-                new ButtonBuilder()
-                    .setCustomId(i.toString())
-                    .setLabel(this.chosenStand!.usedSkills[i].name)
-                    .setStyle(ButtonStyle.Primary)
-            )
-        }
+        this.message = await this.dm.send({ embeds: [emb], components: [menu]}) 
     }
-    async setMainMenu() {
+    async sendMainMenu() {
+        this.message.delete()
         const emb = new EmbedBuilder()
             .setTitle('Битва')
             .setDescription('Выберите действие')
@@ -101,6 +139,27 @@ export class StandUser {
                     .setLabel('Сдаться')
                     .setStyle(ButtonStyle.Primary)
             )
-        await this.message.edit({ components: [buttons], embeds: [emb] })
+        this.message = await this.dm.send({ components: [buttons], embeds: [emb] })
+    }
+    useSpell() {
+        if (this.chosenStand!.status!.hp > 0) {
+            const target = this.fight.anotherPlayer(this).chosenStand as Stand
+            let message = ''
+            this.chosenSpell!.use(this.fight, target)
+            message += `${this.chosenStand?.name} использовал ${this.chosenSpell as Skill}`
+            if (target.status!.hp <= 0) {
+                message += `\n ${target.name} умер`           
+            }
+        } else {
+        }
+    }
+    update() {
+        for (const stand of this.stands.filter(s => s.status!.hp > 0)) {
+            for (const entry of stand.status!.cooldowns) {
+                entry.cd -= 1 
+            }
+        }
+        this.chosenSpell = null
+        this.chosenMove = "Idle"
     }
 }

@@ -1,0 +1,99 @@
+import { SlashCommandBuilder, CommandInteraction, GuildMember, ActionRowBuilder, SelectMenuBuilder, SelectMenuInteraction, ButtonInteraction, ButtonBuilder, ComponentType, ButtonStyle } from "discord.js"
+import { Command } from "../interfaces"
+import { addUser, getBalance, updateBalance, getInventory } from "../db"
+import { Inventory } from "./classes/Inventory"
+
+export const command: Command = {
+    data: new SlashCommandBuilder()
+        .setName('inventory')
+        .setDescription('Инвентарь'),
+    exec: async (client, interaction: CommandInteraction) => {
+        if (!interaction.member) return
+        async function updateMenu() {
+            const roleList = (await getInventory(client.pool, member.id)).roles
+            const roleOptions = []
+            for (const roleId of roleList) {
+                const role = interaction.guild?.roles.cache.find(r => r.id === roleId)
+                if (role) {
+                    roleOptions.push({ label: role.name, description: 'Включить/Выключить', value: role.id })
+                }
+            }
+            const roleMenu: any = new ActionRowBuilder()
+                .addComponents(
+                    new SelectMenuBuilder()
+                        .setCustomId('roleMenu')
+                        .setPlaceholder('Выберите роль для переключения')
+                        .setMaxValues(1)
+                        .setMinValues(1)
+                        .addOptions(roleOptions),
+                )
+            const returnBtn: any = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('return')
+                        .setLabel('Назад')
+                        .setStyle(ButtonStyle.Secondary)
+                )
+            return { components: [roleMenu, returnBtn] }
+        }
+        const member = interaction.member as GuildMember
+        const menu: any = new ActionRowBuilder()
+            .addComponents(
+                new SelectMenuBuilder()
+                    .setCustomId('menu')
+                    .setPlaceholder('Выберите инвентарь для открытия')
+                    .setMaxValues(1)
+                    .setMinValues(1)
+                    .addOptions([{ label: 'Роли', description: 'Включение/Выключение ролей', value: 'roles' }]),
+            )
+        const returnBtn: any = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('escape')
+                    .setLabel('Закрыть')
+                    .setStyle(ButtonStyle.Danger)
+            )
+        const message = await interaction.reply({ components: [menu, returnBtn], fetchReply: true })
+        const collector = message.createMessageComponentCollector({time:60000*5})
+        collector.on('collect', async (i: SelectMenuInteraction | ButtonInteraction) => {
+            if (i.member?.user.id !== interaction.user.id) return
+            const member = i.member as GuildMember
+            switch (i.componentType) {
+                case ComponentType.Button:
+                    switch (i.customId) {
+                        case 'return':
+                            message.edit({ components: [menu, returnBtn] })
+                            break
+
+                        case 'escape':
+                            collector.stop()
+                            break
+                    }
+                    break
+                case ComponentType.SelectMenu:
+                    const value = i.values[0]
+                    switch (i.customId) {
+                        case 'roleMenu':
+                            if (member.roles.cache.find(r => r.id === value)) {
+                                member.roles.remove(value)
+                            } else {
+                                member.roles.add(value)
+                            }
+                            break;
+
+                        case 'menu':
+                            switch (value) {
+                                case 'roles':
+                                    message.edit(await updateMenu())
+                                    break;
+                            }
+                            break;
+                    }
+                    break
+            }
+        })
+        collector.on('end', async (i) => {
+            message.delete()
+        })
+    }
+}

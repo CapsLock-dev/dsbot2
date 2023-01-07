@@ -1,10 +1,6 @@
-import { kMaxLength } from "buffer"
-import { link } from "fs"
-import { getLineAndCharacterOfPosition } from "typescript"
 import { Fight } from "./Fight"
-import { SilverChariot } from "./stands/SilverChariot"
-import { Starplatinum as StarPlatinum } from "./stands/StarPlatinum"
 import { StandUser } from "./StandUser"
+import { standList } from "./data"
 
 export abstract class Stand {
     name!: keyof typeof standList
@@ -53,6 +49,13 @@ export abstract class Stand {
             });
         }
     }
+    getCooldown(skill: Skill) { 
+        const cd = this.status?.cooldowns.find(e => {e.skill = skill})
+        if (cd) {
+            return cd.cd
+        } 
+        return 0
+    }
     editHp(value: number, ignoreDef: boolean) {
         if (!ignoreDef) {
             value -= value * this.defence / 100
@@ -61,7 +64,6 @@ export abstract class Stand {
             this.status!.hp -= value
         } else {
             this.status!.hp = 0
-            this.user.swap('dead')
         }
     }
     editDefence(value: number) {
@@ -87,6 +89,9 @@ export abstract class Stand {
     }
     getOwner(fight: Fight) {
         return fight.anotherPlayer(fight.anotherPlayer(this.ownerId))
+    }
+    isDead() {
+        return this.status!.hp <= 0
     }
 }
 export interface BattleStatus {
@@ -120,26 +125,29 @@ export enum StandStyle {
 }
 
 export interface Effect {
-    readonly name: string,
-    duration: number,
-    user: Function
+    readonly name: string
+    duration: number
+    use: Function
+    description: string
+    preventSwap: boolean
 }
 
 export interface GlobalEffect {
-    readonly name: string,
-    duration: number,
+    readonly name: string
+    duration: number
     use: Function
+    description: string
+    preventSwap: boolean
 }
 
 export interface Skill {
-    readonly name: string,
-    readonly cooldown: number,
+    readonly name: string
+    readonly cooldown: number
     readonly use: (fight: Fight, stand: Stand)=>void,
-    readonly description: string,
-    readonly type: SkillType,
-    readonly damage: number,
-    readonly multi?: boolean,
-    readonly target?: boolean,
+    readonly description: string
+    readonly type: SkillType
+    readonly damage: number
+    readonly target?: boolean
     readonly counterAttack?: boolean
 }
 
@@ -150,9 +158,6 @@ export enum SkillType {
 export const defaultValues = {
     expPerLvl: 100,
     expPerLvlMultiplier: 100
-}
-export const standList = {
-    'Silver Chariot': SilverChariot
 }
 export interface Ability {
     readonly type: AbilityType,

@@ -1,4 +1,4 @@
-import { BattleStatus, Skill, Stand, defaultValues, standList, SkillType, AbilityType, StandRole, StandStyle } from "../Stand";
+import { Skill, Stand, defaultValues, SkillType, AbilityType, StandRole, StandStyle } from "../Stand";
 import { Fight } from "../Fight"
 
 export class SilverChariot extends Stand {
@@ -16,7 +16,7 @@ export class SilverChariot extends Stand {
         this.defence = defence
         this.damage = damage
         this.expPerLvl = expPerLvl
-        this.skills = new Map<Number, Array<Skill>>
+        this.skills = new Map<Number, Skill[]>([])
         this.ability = { type: AbilityType.Passive, name: 'Rapier', description: 'Все атаки пробивают броню', use: undefined, active: true }
         this.infoForAi = { 'counterStands': [], 'role': StandRole.Carry, 'style': StandStyle.DamageDealer }
         this.setup()
@@ -46,7 +46,6 @@ export class SilverChariot extends Stand {
                 'type': SkillType.Special,
                 'cooldown': 0,
                 'use': this.afterimage,
-                multi: true,
                 damage: 0,
             },
             {

@@ -1,9 +1,7 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, GuildMember, ComponentType, EmbedBuilder } from "discord.js"
 import { Command } from "../interfaces"
-import { addUser, getBalance, updateBalance, getStands } from "../db"
+import { getStands } from "../db"
 import { Fight } from "./standBattles/Fight"
-import { StandUser } from "./standBattles/StandUser"
-
 export const command: Command = {
     data: new SlashCommandBuilder()
         .setName('duel')
