@@ -62,8 +62,8 @@ export const command: Command = {
                         if (stands.length == 0) {
                             i.reply({ content: 'У вас уже есть все стенды', ephemeral: true })
                         } else {
-                            const standName = stands[Math.round(Math.random() * stands.length-1)]
-                            const stand = new standList[standName as keyof typeof standList]
+                            const standName = stands[Math.round(Math.random() * (stands.length-1))]
+                            const stand = new (standList[standName as keyof typeof standList])
                             await updateBalance(client.pool, member.id, await getBalance(client.pool, member.id) - 10000)
                             await addStand(client.pool, member.id, stand)
                             i.reply({content: 'Вы получили: ' + standName, ephemeral: true})

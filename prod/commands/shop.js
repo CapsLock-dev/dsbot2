@@ -74,8 +74,8 @@ exports.command = {
                             i.reply({ content: 'У вас уже есть все стенды', ephemeral: true });
                         }
                         else {
-                            const standName = stands[Math.round(Math.random() * stands.length - 1)];
-                            const stand = new data_1.standList[standName];
+                            const standName = stands[Math.round(Math.random() * (stands.length - 1))];
+                            const stand = new (data_1.standList[standName]);
                             yield (0, db_1.updateBalance)(client.pool, member.id, (yield (0, db_1.getBalance)(client.pool, member.id)) - 10000);
                             yield (0, db_1.addStand)(client.pool, member.id, stand);
                             i.reply({ content: 'Вы получили: ' + standName, ephemeral: true });

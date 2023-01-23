@@ -49,7 +49,7 @@ export async function addElementInv(pool: Pool, id: string, type: PossibleItems,
     element = type + ":" + element
     inv.push(element)
     let str = '['
-    for (let i = 0; i < inv.array.length; i++) {
+    for (let i = 0; i < inv.array.length-1; i++) {
         str += i + 1 >= inv.array.length ? "'" + inv.array[i] + "'" : "'" + inv.array[i] + "',"
     }
     str += ']'
@@ -70,8 +70,8 @@ export async function addStand(pool: Pool, id: string, stand: Stand) {
     if ((await getStands(pool, id)).length >= 5) {
         team = false
     }
-    await pool.query(`INSERT INTO stands SET (user_id, name, maxhp, lvl, exp, speed, defence, damage, expPerLvl, usedSkills, team) VALUES ` +
-        `(${id}, ${stand.name}, ${stand.maxhp}, ${stand.lvl}, ${stand.exp}, ${stand.speed}, ${stand.defence}, ${stand.damage}, ${stand.expPerLvl}, ${skillsToArray(stand.usedSkills)}, ${team})`)
+    await pool.query(`INSERT INTO stands (user_id, name, maxhp, lvl, exp, speed, defence, damage, expPerLvl, usedSkills, team) VALUES ` +
+        `(${id}, '${stand.name}', ${stand.maxhp}, ${stand.lvl}, ${stand.exp}, ${stand.speed}, ${stand.defence}, ${stand.damage}, ${stand.expPerLvl}, ARRAY${skillsToArray(stand.usedSkills)}, ${team})`)
 }
 
 export async function updateStand(pool: Pool, id: string, stand: Stand) {
@@ -86,8 +86,11 @@ export async function updateStandTeam(pool: Pool, id: string, name: string, team
 
 function skillsToArray(skills: Skill[]) {
     let str = '['
-    for (let i = 0; i<=skills.length; i++) {
-        str += i+1>=skills.length ? skills[i].name : skills[i].name + ', '
+    for (let i = 0; i<=skills.length-1; i++) {
+        str += "'" + (i+1>=skills.length ? skills[i].name : skills[i].name) + "'"
+        if (i+1 <= skills.length-1) {
+            str += ','
+        }
     }
     str += ']'
     console.log(str)

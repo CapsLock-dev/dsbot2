@@ -23,14 +23,20 @@ class Stand {
         }
     }
     setupSkills(skillNames) {
-        for (const key of [...this.skills.keys()]) {
-            const skills = this.skills.get(key);
-            skills.forEach(el => {
-                if (skillNames.includes(el.name)) {
-                    skillNames.splice(skillNames.indexOf(el.name), 1);
-                    this.usedSkills.push(el);
-                }
-            });
+        if (skillNames.length == 0) {
+            const skills = this.skills.get(1);
+            this.usedSkills = skills;
+        }
+        else {
+            for (const key of [...this.skills.keys()]) {
+                const skills = this.skills.get(key);
+                skills.forEach(el => {
+                    if (skillNames.includes(el.name)) {
+                        skillNames.splice(skillNames.indexOf(el.name), 1);
+                        this.usedSkills.push(el);
+                    }
+                });
+            }
         }
     }
     getCooldown(skill) {
@@ -42,6 +48,7 @@ class Stand {
         return 0;
     }
     editHp(value, ignoreDef) {
+        var _a;
         if (!ignoreDef) {
             value -= value * this.defence / 100;
         }
@@ -51,6 +58,7 @@ class Stand {
         else {
             this.status.hp = 0;
         }
+        console.log((_a = this.status) === null || _a === void 0 ? void 0 : _a.hp);
     }
     editDefence(value) {
         if (this.status.defence + value < 0) {

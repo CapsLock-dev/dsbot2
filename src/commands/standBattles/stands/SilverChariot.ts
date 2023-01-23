@@ -1,11 +1,12 @@
 import { Skill, Stand, defaultValues, SkillType, AbilityType, StandRole, StandStyle } from "../Stand";
 import { Fight } from "../Fight"
+import { Afterimage } from "../effects/effects";
 
 export class SilverChariot extends Stand {
     hasRapier = true
     ownerId: string = ''
     gifLink = ''
-    constructor(maxhp: number = 100, lvl: number = 1, exp: number = 0, speed: number = 5.5, defence: number = 20, damage: number = 5, expPerLvl: number = defaultValues.expPerLvl, usedSkills: string[] = []) {
+    constructor(maxhp: number = 100, lvl: number = 1, exp: number = 0, speed: number = 5.5, defence: number = 20, damage: number = 20, expPerLvl: number = defaultValues.expPerLvl, usedSkills: string[] = []) {
         super();
         this.name = 'Silver Chariot'
         this.maxhp = maxhp
@@ -34,7 +35,7 @@ export class SilverChariot extends Stand {
             },
             {
                 'name': 'Take off armor',
-                'description': 'Снижает вашу броню до 0 и увеличивает вашу скорость на одну ступень',
+                'description': 'Снижает вашу броню до 0 и увеличивает вашу скорость на 1',
                 'type': SkillType.Special,
                 'cooldown': 9999999,
                 'use': this.remove_armor,
@@ -58,28 +59,25 @@ export class SilverChariot extends Stand {
             }
         ])
     }
-    rapier_hit(fight: Fight, enemy: Stand) {
-        if (!enemy.status || !this.status) return
-        const status = this.status
-        enemy.editHp(status.damage, this.ability.active)
+    rapier_hit(fight: Fight, enemy: Stand, self: Stand) {
+        const status = self.status
+        return enemy.hit(status!.damage, self.ability.active, true)
     }
-    remove_armor(fight: Fight, enemy: Stand) {
-        if (!enemy.status || !this.status) return
-        const status = this.status
-        this.editDefence(-status.defence)
+    remove_armor(fight: Fight, enemy: Stand, self: Stand) {
+        const status = self.status
+        return self.editDefence(-status!.defence)
     }
-    rapier_shot(fight: Fight, enemy: Stand) {
-        if (!enemy.status || !this.status) return
-        const status = this.status
-        for (const target of fight.anotherPlayer(this.ownerId).stands) {
+    rapier_shot(fight: Fight, enemy: Stand, self: Stand) {
+        const status = self.status
+        for (const target of fight.anotherPlayer(self.ownerId).stands) {
             if (!target.status || target.status.hp == 0) continue
-            target.editHp(-status.damage * 0.7, false)
+            target.editHp(-status!.damage * 0.7, false)
+            target.hit(status!.damage, self.ability.active, true)
         }
+        return true
     }
-    afterimage(fight: Fight, enemy: Stand) {
-        if (!enemy.status || !this.status) return
-        const status = this.status
-
+    afterimage(fight: Fight, enemy: Stand, self: Stand) {
+        return self.addEffect(new Afterimage())
     }
     aiMovePicker(fight: Fight, enemy: Stand) {
         const status = this.status

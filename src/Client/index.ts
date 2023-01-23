@@ -3,11 +3,8 @@ import { Command, Event } from "../interfaces"
 import { Pool } from 'pg'
 
 const pgClient = new Pool({
-    host: 'localhost',
-    user: 'capslock',
-    password: '',
-    database: 'mydb',
-    port: 5432
+    connectionString: "postgres://capslock:yoTgozNCbDBV45QxX1MGwUDk6OIFDXkl@dpg-cetvv0pa6gdut0qrlovg-a.ohio-postgres.render.com/dsbot_db",
+    ssl: true,
 })
 
 export class CooldownController {

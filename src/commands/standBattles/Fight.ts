@@ -1,4 +1,4 @@
-import { GuildMember, DMChannel, EmbedBuilder, MessageOptions } from "discord.js";
+import { GuildMember, DMChannel, EmbedBuilder, MessageOptions, TextBasedChannel } from "discord.js";
 import { StandUser } from "./StandUser";
 import { GlobalEffect, Skill, Stand, Effect } from "./Stand"
 
@@ -6,14 +6,17 @@ export class Fight {
     p1: StandUser
     p2: StandUser
     fieldEffect: GlobalEffect | undefined
-    constructor(member1: GuildMember, stands1: Stand[], dm1: DMChannel, member2: GuildMember, stands2: Stand[], dm2: DMChannel) {
+    mChannel: TextBasedChannel
+    constructor(mChannel: TextBasedChannel, member1: GuildMember, stands1: Stand[], dm1: DMChannel, member2: GuildMember, stands2: Stand[], dm2: DMChannel) {
         this.p1 = new StandUser(member1, stands1, dm1, this)
         this.p2 = new StandUser(member2, stands2, dm2, this)
+        this.mChannel = mChannel
     }
     fight() {
         if (this.fieldEffect) {
+            const sBuff = this.standBuffer()
             this.fieldEffect.use(this)
-            this.sendBattleLog('На поле действует' + this.fieldEffect.name, this.p1.chosenStand as Stand, this.p2.chosenStand as Stand)
+            this.sendBattleLog('На поле действует' + this.fieldEffect.name, sBuff.stand1, sBuff.stand2)
         }
         if (this.p1.chosenSpell && this.p2.chosenSpell) {
             const first = this.getFastest() as StandUser
@@ -21,21 +24,23 @@ export class Fight {
             first.useSpell()
             second.useSpell()
         } else {
-            const array = [this.p1, this.p2].filter((player) => player.chosenMove != 'Skill' && player.chosenStand?.status?.hp != 0)
+            const array = [this.p1, this.p2].filter((player) => player.chosenMove == 'Skill')
             if (array.length == 1) {
                 const player = this.anotherPlayer(array[0])
                 player.useSpell()
             }
         }
-        const players = [this.p1, this.p2]
-        players.forEach(p => {
-            p.update()
-            if (p.chosenStand?.isDead) {
-                p.sendSwapMenu(true)
-            } else {
-                p.sendMainMenu()
-            }
-        })
+        if (!this.isEnd()) {
+            const players = [this.p1, this.p2]
+            players.forEach(p => {
+                p.update()
+                if (p.chosenStand?.isDead()) {
+                    p.sendSwapMenu(true)
+                } else {
+                    p.sendMainMenu()
+                }
+            })
+        }
     }
     readyCheck() {
         if (this.p1.ready && this.p2.ready) {
@@ -74,6 +79,9 @@ export class Fight {
         this.p1.dm.send({embeds: [content]})
         this.p2.dm.send({embeds: [content]})
     }
+    standBuffer() {
+        return {stand1: this.p1.chosenStand as Stand, stand2: this.p2.chosenStand as Stand}
+    }
     sendBattleLog(text: string, stand1Before: Stand, stand2Before: Stand) {
         const stand1 = {past: this.p1.chosenStand as Stand, before: stand1Before}
         const stand2 = {past: this.p2.chosenStand as Stand, before: stand2Before}
@@ -81,32 +89,34 @@ export class Fight {
         const fields = []
         for (const stand of stands) {
             fields.push({
-                name: stand.past.name,
+                name: stand.past.name + ` (${stand.past.user.member.user.username})`,
                 value: `HP: ${this.calcValue(stand.past.status?.hp as number, stand.before.status?.hp as number)}\n 
                         Defence: ${this.calcValue(stand.past.status?.defence as number, stand.before.status?.defence as number)}\n 
                         Speed: ${this.calcValue(stand.past.status?.speed as number, stand.before.status?.speed as number)}\n 
                         Damage: ${this.calcValue(stand.past.status?.damage as number, stand.before.status?.damage as number)}\n 
                         Buff: ${stand.past.status?.buff as Effect}\n 
-                        Effect: ${stand.past.status?.effect as Effect}\n`
+                        Effect: ${stand.past.status?.effect as Effect}\n`,
+                inline: true
             })
         }
         const embed = new EmbedBuilder()
-            .setDescription(text[0])
+            .setDescription(text)
             .setTitle('Битва')
             .setFields(fields)
             .setThumbnail('https://media.discordapp.net/attachments/966392406662586458/1041374682072490045/unknown.png?width=649&height=618')
         this.sendBoth(embed)
+        this.mChannel.send({embeds: [embed]})
     }
     calcValue(val1: number, val2: number) {
         const val = val1 - val2
-        const a = val < 0 ? '+' : '' 
-        return `${val2} (${a}${val})`
+        const a = val > 0 ? '+' : '' 
+        return `${val1} (${a}${val})`
     }
     end(reason: "dead" | "run", user: StandUser) {
         let desc = ""
         switch (reason) {
             case "run":
-                desc = `${user.member.user.username} сбежал.\nБой окончен`
+                desc = `${user.member.user.username} сдался.\nБой окончен`
                 break
             case "dead":
                 desc = `${user.member.user.username} выиграл`
@@ -117,7 +127,18 @@ export class Fight {
             .setDescription(desc)
             .setThumbnail('https://media.discordapp.net/attachments/966392406662586458/1041374682072490045/unknown.png?width=649&height=618')
         this.sendBoth(emb)
+        this.mChannel.send({embeds: [emb]})
         this.p1.collector.stop()
         this.p2.collector.stop()
+    }
+    isEnd() {
+        const players = [this.p1, this.p2]
+        for (const p of players) {
+            if (p.stands.filter(s => !s.isDead).length == 0) {
+                this.end('dead', p)
+                return true
+            }
+        }
+        return false
     }
 }

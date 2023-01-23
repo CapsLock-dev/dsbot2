@@ -25,6 +25,6 @@ exports.command = {
         const member = interaction.member;
         const dm1 = yield member.createDM();
         const dm2 = yield opponent.createDM();
-        new Fight_1.Fight(member, yield (0, db_1.getStands)(client.pool, member.id), dm1, opponent, yield (0, db_1.getStands)(client.pool, opponent.id), dm2);
+        new Fight_1.Fight(interaction.channel, member, yield (0, db_1.getStands)(client.pool, member.id), dm1, opponent, yield (0, db_1.getStands)(client.pool, opponent.id), dm2);
     })
 };

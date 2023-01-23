@@ -30,8 +30,9 @@ export class StandUser {
     }
     async init() {
         const options = []
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < this.stands.length; i++) {
             const stand = this.stands[i]
+            stand.startFight()
             options.push({ label: stand.name, description: `Lvl: ${stand.lvl}`, value: i.toString() })
         }
         const emb = new EmbedBuilder()
@@ -51,43 +52,69 @@ export class StandUser {
     menuHandler(i: ButtonInteraction | SelectMenuInteraction) {
         switch (i.componentType) {
             case ComponentType.Button:
+                this.message.delete()
+                switch (i.customId) {
+                    case 'attack':
+                        this.sendAttackMenu()
+                        break
+                    case 'swap':
+                        this.sendSwapMenu(false)
+                        break
+                    case 'giveup':
+                        this.run()
+                        break
+                }
                 break
             case ComponentType.SelectMenu:
+                const values = (i as SelectMenuInteraction).values[0]
                 switch (i.customId) {
                     case 'start_stand':
-                        this.chosenStand = this.stands[parseInt(i.values[0])]
+                        this.chosenStand = this.stands[parseInt(values)]
+                        this.message.delete()
                         this.sendAttackMenu()
                         break
                     case 'swap_stand':
-                        this.chosenStand = this.stands[parseInt(i.values[0])]
+                        this.chosenStand = this.stands[parseInt(values)]
+                        this.ready = true
+                        this.fight.readyCheck()
+                        this.message.delete()
                         break
+                    case 'swap_stand_dead':
+                        this.chosenStand = this.stands[parseInt(values)]
+                        this.message.delete()
+                        this.sendAttackMenu()
                     case 'attack_menu':
-                        const chosenSkill = this.chosenStand?.usedSkills[parseInt(i.values[0])] as Skill
+                        const chosenSkill = this.chosenStand?.usedSkills[parseInt(values)] as Skill
                         if (this.chosenStand?.getCooldown(chosenSkill) == 0) {
                             this.chosenSpell = chosenSkill
+                            console.log(this.chosenSpell)
+                            this.ready = true
+                            this.fight.readyCheck()
+                            this.message.delete()
                         } else {
                             i.reply('Этот скилл находится в кд')
                         }
+                        break
                 }
                 break
         }
     }
     async sendSwapMenu(dead: boolean) {
-        await this.message.delete()
         const options = []
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < this.stands.length; i++) {
             const stand = this.stands[i]
             if (stand.status?.hp != 0) {
                 options.push({ label: stand.name, description: `Lvl: ${stand.lvl}`, value: i.toString() })
             }
         }
+        const customId = dead ? 'swap_stand_dead' : 'swap_stand'
         const emb = new EmbedBuilder()
             .setTitle('Битва')
             .setThumbnail('https://media.discordapp.net/attachments/966392406662586458/1041374682072490045/unknown.png?width=649&height=618')
         const menu: any = new ActionRowBuilder()
             .addComponents(
                 new SelectMenuBuilder()
-                    .setCustomId('swap_stand')
+                    .setCustomId(customId)
                     .setMaxValues(1)
                     .setMinValues(1)
                     .setPlaceholder('Выберите стенд')
@@ -99,7 +126,6 @@ export class StandUser {
        this.fight.end('run', this) 
     }
     async sendAttackMenu() {
-        await this.message.delete()
         const options = []
         const stand = this.chosenStand as Stand
         for (let i = 0; i < stand.usedSkills.length; i++) {
@@ -108,6 +134,7 @@ export class StandUser {
         }
         const emb = new EmbedBuilder()
             .setTitle('Атака')
+            .setThumbnail('https://media.discordapp.net/attachments/966392406662586458/1041374682072490045/unknown.png?width=649&height=618')
         const menu: any = new ActionRowBuilder()
             .addComponents(
                 new SelectMenuBuilder()
@@ -120,10 +147,10 @@ export class StandUser {
         this.message = await this.dm.send({ embeds: [emb], components: [menu]}) 
     }
     async sendMainMenu() {
-        this.message.delete()
         const emb = new EmbedBuilder()
             .setTitle('Битва')
             .setDescription('Выберите действие')
+            .setThumbnail('https://media.discordapp.net/attachments/966392406662586458/1041374682072490045/unknown.png?width=649&height=618')
         const buttons: any = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -143,14 +170,18 @@ export class StandUser {
     }
     useSpell() {
         if (this.chosenStand!.status!.hp > 0) {
+            const sBuff = this.fight.standBuffer()
             const target = this.fight.anotherPlayer(this).chosenStand as Stand
             let message = ''
-            this.chosenSpell!.use(this.fight, target)
-            message += `${this.chosenStand?.name} использовал ${this.chosenSpell as Skill}`
-            if (target.status!.hp <= 0) {
-                message += `\n ${target.name} умер`           
+            const success = this.chosenSpell!.use(this.fight, target, this.chosenStand as Stand)
+            message += `${this.chosenStand?.name} (${target.user.member.user.username}) использовал ${this.chosenSpell?.name}`
+            if (!success) {
+                message += `\n ${this.chosenSpell!.name} не сработал`
             }
-        } else {
+            if (target.status!.hp <= 0) {
+                message += `\n ${target.name} (${target.user.member.user.username}) умер`           
+            }
+            this.fight.sendBattleLog(message, sBuff.stand1, sBuff.stand2)
         }
     }
     update() {

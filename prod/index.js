@@ -12,7 +12,6 @@ const client = new Client_1.default({ intents: [discord_js_1.IntentsBitField.Fla
 const commands = [];
 client.pool.query('CREATE TABLE IF NOT EXISTS users(id text CONSTRAINT id_pk PRIMARY KEY, lvl integer, exp integer, balance integer, inventory text[][])');
 client.pool.query('CREATE TABLE IF NOT EXISTS stands(user_id text, name text, maxhp integer, lvl integer, exp integer, speed integer, defence integer, damage integer, expPerLvl integer, usedSkills text[], team boolean)');
-// client.pool.query('ALTER TABLE users ADD inventory text[][]')
 for (const file of (0, fs_1.readdirSync)(__dirname + '/commands').filter(file => file.endsWith('.js'))) {
     const command = require(`./commands/${file}`).command;
     client.commands.set(command.data.name, command);

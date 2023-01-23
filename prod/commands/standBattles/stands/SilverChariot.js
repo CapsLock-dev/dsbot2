@@ -59,32 +59,25 @@ class SilverChariot extends Stand_1.Stand {
             }
         ]);
     }
-    rapier_hit(fight, enemy) {
-        if (!enemy.status || !this.status)
-            return;
-        const status = this.status;
-        enemy.editHp(status.damage, this.ability.active);
+    rapier_hit(fight, enemy, self) {
+        const status = self.status;
+        console.log(status);
+        enemy.editHp(status.damage * 100, self.ability.active);
     }
-    remove_armor(fight, enemy) {
-        if (!enemy.status || !this.status)
-            return;
-        const status = this.status;
-        this.editDefence(-status.defence);
+    remove_armor(fight, enemy, self) {
+        const status = self.status;
+        self.editDefence(-status.defence);
     }
-    rapier_shot(fight, enemy) {
-        if (!enemy.status || !this.status)
-            return;
-        const status = this.status;
-        for (const target of fight.anotherPlayer(this.ownerId).stands) {
+    rapier_shot(fight, enemy, self) {
+        const status = self.status;
+        for (const target of fight.anotherPlayer(self.ownerId).stands) {
             if (!target.status || target.status.hp == 0)
                 continue;
             target.editHp(-status.damage * 0.7, false);
         }
     }
-    afterimage(fight, enemy) {
-        if (!enemy.status || !this.status)
-            return;
-        const status = this.status;
+    afterimage(fight, enemy, self) {
+        const status = self.status;
     }
     aiMovePicker(fight, enemy) {
         const status = this.status;

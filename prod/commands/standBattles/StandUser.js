@@ -34,8 +34,9 @@ class StandUser {
     init() {
         return __awaiter(this, void 0, void 0, function* () {
             const options = [];
-            for (let i = 0; i < 4; i++) {
+            for (let i = 0; i < this.stands.length; i++) {
                 const stand = this.stands[i];
+                stand.startFight();
                 options.push({ label: stand.name, description: `Lvl: ${stand.lvl}`, value: i.toString() });
             }
             const emb = new discord_js_1.EmbedBuilder()
@@ -55,24 +56,49 @@ class StandUser {
         var _a, _b;
         switch (i.componentType) {
             case discord_js_1.ComponentType.Button:
+                switch (i.customId) {
+                    case 'attack':
+                        this.sendAttackMenu();
+                        break;
+                    case 'swap':
+                        this.sendSwapMenu(false);
+                        break;
+                    case 'giveup':
+                        this.run();
+                        break;
+                }
                 break;
             case discord_js_1.ComponentType.SelectMenu:
+                const values = i.values[0];
                 switch (i.customId) {
                     case 'start_stand':
-                        this.chosenStand = this.stands[parseInt(i.values[0])];
+                        this.chosenStand = this.stands[parseInt(values)];
+                        this.message.delete();
                         this.sendAttackMenu();
                         break;
                     case 'swap_stand':
-                        this.chosenStand = this.stands[parseInt(i.values[0])];
+                        this.chosenStand = this.stands[parseInt(values)];
+                        this.ready = true;
+                        this.fight.readyCheck();
+                        this.message.delete();
                         break;
+                    case 'swap_stand_dead':
+                        this.chosenStand = this.stands[parseInt(values)];
+                        this.message.delete();
+                        this.sendAttackMenu();
                     case 'attack_menu':
-                        const chosenSkill = (_a = this.chosenStand) === null || _a === void 0 ? void 0 : _a.usedSkills[parseInt(i.values[0])];
+                        const chosenSkill = (_a = this.chosenStand) === null || _a === void 0 ? void 0 : _a.usedSkills[parseInt(values)];
                         if (((_b = this.chosenStand) === null || _b === void 0 ? void 0 : _b.getCooldown(chosenSkill)) == 0) {
                             this.chosenSpell = chosenSkill;
+                            console.log(this.chosenSpell);
+                            this.ready = true;
+                            this.fight.readyCheck();
+                            this.message.delete();
                         }
                         else {
                             i.reply('Этот скилл находится в кд');
                         }
+                        break;
                 }
                 break;
         }
@@ -80,20 +106,20 @@ class StandUser {
     sendSwapMenu(dead) {
         var _a;
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.message.delete();
             const options = [];
-            for (let i = 0; i < 4; i++) {
+            for (let i = 0; i < this.stands.length; i++) {
                 const stand = this.stands[i];
                 if (((_a = stand.status) === null || _a === void 0 ? void 0 : _a.hp) != 0) {
                     options.push({ label: stand.name, description: `Lvl: ${stand.lvl}`, value: i.toString() });
                 }
             }
+            const customId = dead ? 'swap_stand_dead' : 'swap_stand';
             const emb = new discord_js_1.EmbedBuilder()
                 .setTitle('Битва')
                 .setThumbnail('https://media.discordapp.net/attachments/966392406662586458/1041374682072490045/unknown.png?width=649&height=618');
             const menu = new discord_js_1.ActionRowBuilder()
                 .addComponents(new discord_js_1.SelectMenuBuilder()
-                .setCustomId('swap_stand')
+                .setCustomId(customId)
                 .setMaxValues(1)
                 .setMinValues(1)
                 .setPlaceholder('Выберите стенд')
@@ -108,7 +134,6 @@ class StandUser {
     }
     sendAttackMenu() {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.message.delete();
             const options = [];
             const stand = this.chosenStand;
             for (let i = 0; i < stand.usedSkills.length; i++) {
@@ -129,7 +154,6 @@ class StandUser {
     }
     sendMainMenu() {
         return __awaiter(this, void 0, void 0, function* () {
-            this.message.delete();
             const emb = new discord_js_1.EmbedBuilder()
                 .setTitle('Битва')
                 .setDescription('Выберите действие');
@@ -148,17 +172,17 @@ class StandUser {
         });
     }
     useSpell() {
-        var _a;
+        var _a, _b;
         if (this.chosenStand.status.hp > 0) {
+            const sBuff = this.fight.standBuffer();
             const target = this.fight.anotherPlayer(this).chosenStand;
             let message = '';
-            this.chosenSpell.use(this.fight, target);
-            message += `${(_a = this.chosenStand) === null || _a === void 0 ? void 0 : _a.name} использовал ${this.chosenSpell}`;
+            this.chosenSpell.use(this.fight, target, this.chosenStand);
+            message += `${(_a = this.chosenStand) === null || _a === void 0 ? void 0 : _a.name} использовал ${(_b = this.chosenSpell) === null || _b === void 0 ? void 0 : _b.name}`;
             if (target.status.hp <= 0) {
                 message += `\n ${target.name} умер`;
             }
-        }
-        else {
+            this.fight.sendBattleLog(message, sBuff.stand1, sBuff.stand2);
         }
     }
     update() {
