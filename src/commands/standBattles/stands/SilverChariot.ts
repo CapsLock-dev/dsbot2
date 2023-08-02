@@ -6,6 +6,7 @@ export class SilverChariot extends Stand {
     hasRapier = true
     ownerId: string = ''
     gifLink = ''
+    image = 'https://static.wikia.nocookie.net/jjba/images/8/88/SilverChariot_AnimeAV.png/revision/latest/scale-to-width-down/270?cb=20160414095744'
     constructor(maxhp: number = 100, lvl: number = 1, exp: number = 0, speed: number = 5.5, defence: number = 20, damage: number = 20, expPerLvl: number = defaultValues.expPerLvl, usedSkills: string[] = []) {
         super();
         this.name = 'Silver Chariot'
@@ -74,6 +75,7 @@ export class SilverChariot extends Stand {
             target.editHp(-status!.damage * 0.7, false)
             target.hit(status!.damage, self.ability.active, true)
         }
+        this.ability.active = false
         return true
     }
     afterimage(fight: Fight, enemy: Stand, self: Stand) {

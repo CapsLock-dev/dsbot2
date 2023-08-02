@@ -4,14 +4,14 @@ import { Stand, Skill } from "../commands/standBattles/Stand";
 import { standList } from "../commands/standBattles/data"
 
 export async function addUser(pool: Pool, id: string): Promise<void> {
-    await pool.query(`INSERT INTO users (id, balance, inventory) VALUES (${id}, 150, ARRAY['']) ON CONFLICT DO NOTHING`)
+    await pool.query(`INSERT INTO users (lvl, exp, id, balance, openedStands, inventory) VALUES (1, 0, ${id}, 150, ARRAY[]::INTEGER[], ARRAY[]::TEXT[]) ON CONFLICT DO NOTHING`)
 }
 
 export async function getBalance(pool: Pool, id: string): Promise<number> {
     const result = await pool.query(`SELECT balance FROM users WHERE id='${id}'`)
     return result.rows[0].balance;
 }
-
+ 
 export async function updateBalance(pool: Pool, id: string, balance: number): Promise<void> {
     await pool.query(`UPDATE users SET balance=${balance} WHERE id='${id}'`)
 }
@@ -37,10 +37,6 @@ export async function removeUser(pool: Pool, id: string) {
 
 export async function getInventory(pool: Pool, id: string): Promise<Inventory> {
     let result = await pool.query(`SELECT inventory FROM users WHERE id='${id}'`)
-    if (!result.rows[0].inventory) {
-        await pool.query(`UPDATE users SET inventory=ARRAY[['']] WHERE id='${id}'`)
-        result = await pool.query(`SELECT inventory FROM users WHERE id='${id}'`)
-    }
     return new Inventory(result.rows[0].inventory)
 }
 
@@ -48,12 +44,8 @@ export async function addElementInv(pool: Pool, id: string, type: PossibleItems,
     const inv = (await getInventory(pool, id))
     element = type + ":" + element
     inv.push(element)
-    let str = '['
-    for (let i = 0; i < inv.array.length-1; i++) {
-        str += i + 1 >= inv.array.length ? "'" + inv.array[i] + "'" : "'" + inv.array[i] + "',"
-    }
-    str += ']'
-    await pool.query(`UPDATE users SET inventory=ARRAY${str} WHERE id='${id}'`)
+    await pool.query("UPDATE users SET inventory=$1 WHERE id=$2", [inv.array, id.toString()])
+    
 }
 
 export async function getStands(pool: Pool, id: string): Promise<Stand[]> {
@@ -65,18 +57,27 @@ export async function getStands(pool: Pool, id: string): Promise<Stand[]> {
     return array
 }
 
+export async function getTeamStands(pool: Pool, id: string): Promise<Stand[]> {
+    const stands = await pool.query(`SELECT * FROM stands WHERE user_id='${id}' AND team=true`)
+    const array: Stand[] = []
+    for (const stand of stands.rows) {
+        array.push(new standList[stand.name as keyof typeof standList](stand.maxhp, stand.lvl, stand.exp, stand.speed, stand.defence, stand.damage, stand.expPerLvl, stand.userSkills))
+    }
+    return array
+}
+
 export async function addStand(pool: Pool, id: string, stand: Stand) {
     let team = true
-    if ((await getStands(pool, id)).length >= 5) {
+    if ((await getTeamStands(pool, id)).length >= 5) {
         team = false
     }
     await pool.query(`INSERT INTO stands (user_id, name, maxhp, lvl, exp, speed, defence, damage, expPerLvl, usedSkills, team) VALUES ` +
-        `(${id}, '${stand.name}', ${stand.maxhp}, ${stand.lvl}, ${stand.exp}, ${stand.speed}, ${stand.defence}, ${stand.damage}, ${stand.expPerLvl}, ARRAY${skillsToArray(stand.usedSkills)}, ${team})`)
+        `(${id}, '${stand.name}', ${stand.maxhp}, ${stand.lvl}, ${stand.exp}, ${stand.speed}, ${stand.defence}, ${stand.damage}, ${stand.expPerLvl}, ARRAY[${skillsToName(stand.usedSkills)}], ${team})`)
 }
 
 export async function updateStand(pool: Pool, id: string, stand: Stand) {
     await pool.query(`UPDATE stands SET (user_id, name, maxhp, lvl, exp, speed, defence, damage, expPerLvl, usedSkills, team) ` +
-        `(${stand.maxhp}, ${stand.lvl}, ${stand.exp}, ${stand.speed}, ${stand.defence}, ${stand.damage}, ${stand.expPerLvl}, ${skillsToArray(stand.usedSkills)}) ` +
+        `(${stand.maxhp}, ${stand.lvl}, ${stand.exp}, ${stand.speed}, ${stand.defence}, ${stand.damage}, ${stand.expPerLvl}, ARRAY[${skillsToName(stand.usedSkills)}]) ` +
         `WHERE user_id='${id}' AND name=${stand.name}`)
 }
 
@@ -84,15 +85,9 @@ export async function updateStandTeam(pool: Pool, id: string, name: string, team
     await pool.query(`UPDATE stands SET team=${team} WHERE user_id='${id}' AND name=${name}`)
 }
 
-function skillsToArray(skills: Skill[]) {
-    let str = '['
-    for (let i = 0; i<=skills.length-1; i++) {
-        str += "'" + (i+1>=skills.length ? skills[i].name : skills[i].name) + "'"
-        if (i+1 <= skills.length-1) {
-            str += ','
-        }
-    }
-    str += ']'
-    console.log(str)
-    return str
+function skillsToName(skills: Skill[]) {
+    const skillNames = skills.map(skill => {
+        return `'${skill.name}'`
+    })
+    return skillNames
 }

@@ -34,13 +34,14 @@ export const command: Command = {
                             const everyone = member.guild.roles.cache.find(r => r.name === '@everyone') as Role
                             const channel = await member.guild.channels.create({
                                 name: member.user.username,
-                                parent: '1039149287524806688',
-                                permissionOverwrites: [{ id: everyone.id, deny: ['ViewChannel'] }, { id: member.id, allow: ['ViewChannel'] }]
+                                parent: '1046774338185076786',
+                                permissionOverwrites: [{ id: everyone.id, deny: ['ViewChannel'] }, { id: member.id, allow: ['ViewChannel', 'ManageChannels'] }]
                             })
-                            addElementInv(client.pool, member.id, 'channels', channel.id)
+                            //addElementInv(client.pool, member.id, 'channels', channel.id)
                             await updateBalance(client.pool, member.id, await getBalance(client.pool, member.id) - 6000)
                             i.reply({ content: 'Канал создан', ephemeral: true })
                         } catch (e) {
+                            console.log(e)
                             i.reply( {content: 'Недостаточно прав', ephemeral: true} )
                         }
                     } else {
@@ -51,11 +52,9 @@ export const command: Command = {
                 case 'arrow':
                     if (await getBalance(client.pool, member.id) >= 10000) {
                         const userStands = await getStands(client.pool, member.id)
-                        const stands = Object.keys(standList)
-                        
-                        stands.filter((standName => {
+                        const stands = Object.keys(standList).filter((standName => {
                             for (const stand of userStands) {
-                                if (stand.name === standName) return false
+                                if (stand.name == standName) return false
                             }
                             return true
                         }))

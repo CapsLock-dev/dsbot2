@@ -2,12 +2,14 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SilverChariot = void 0;
 const Stand_1 = require("../Stand");
+const effects_1 = require("../effects/effects");
 class SilverChariot extends Stand_1.Stand {
-    constructor(maxhp = 100, lvl = 1, exp = 0, speed = 5.5, defence = 20, damage = 5, expPerLvl = Stand_1.defaultValues.expPerLvl, usedSkills = []) {
+    constructor(maxhp = 100, lvl = 1, exp = 0, speed = 5.5, defence = 20, damage = 20, expPerLvl = Stand_1.defaultValues.expPerLvl, usedSkills = []) {
         super();
         this.hasRapier = true;
         this.ownerId = '';
         this.gifLink = '';
+        this.image = 'https://static.wikia.nocookie.net/jjba/images/8/88/SilverChariot_AnimeAV.png/revision/latest/scale-to-width-down/270?cb=20160414095744';
         this.name = 'Silver Chariot';
         this.maxhp = maxhp;
         this.lvl = lvl;
@@ -35,7 +37,7 @@ class SilverChariot extends Stand_1.Stand {
             },
             {
                 'name': 'Take off armor',
-                'description': 'Снижает вашу броню до 0 и увеличивает вашу скорость на одну ступень',
+                'description': 'Снижает вашу броню до 0 и увеличивает вашу скорость на 1',
                 'type': Stand_1.SkillType.Special,
                 'cooldown': 9999999,
                 'use': this.remove_armor,
@@ -61,12 +63,11 @@ class SilverChariot extends Stand_1.Stand {
     }
     rapier_hit(fight, enemy, self) {
         const status = self.status;
-        console.log(status);
-        enemy.editHp(status.damage * 100, self.ability.active);
+        return enemy.hit(status.damage, self.ability.active, true);
     }
     remove_armor(fight, enemy, self) {
         const status = self.status;
-        self.editDefence(-status.defence);
+        return self.editDefence(-status.defence);
     }
     rapier_shot(fight, enemy, self) {
         const status = self.status;
@@ -74,10 +75,13 @@ class SilverChariot extends Stand_1.Stand {
             if (!target.status || target.status.hp == 0)
                 continue;
             target.editHp(-status.damage * 0.7, false);
+            target.hit(status.damage, self.ability.active, true);
         }
+        this.ability.active = false;
+        return true;
     }
     afterimage(fight, enemy, self) {
-        const status = self.status;
+        return self.addEffect(new effects_1.Afterimage());
     }
     aiMovePicker(fight, enemy) {
         const status = this.status;

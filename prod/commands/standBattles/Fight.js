@@ -10,12 +10,13 @@ class Fight {
         this.mChannel = mChannel;
     }
     fight() {
-        if (this.fieldEffect) {
-            const sBuff = this.standBuffer();
-            this.fieldEffect.use(this);
-            this.sendBattleLog('На поле действует' + this.fieldEffect.name, sBuff.stand1, sBuff.stand2);
+        let freezed = false;
+        if (this.p1.freezed || this.p2.freezed) {
+            const p = this.anotherPlayer([this.p1, this.p2].filter(player => player.freezed)[0]);
+            p.useSpell();
+            freezed = true;
         }
-        if (this.p1.chosenSpell && this.p2.chosenSpell) {
+        if (this.p1.chosenSpell && this.p2.chosenSpell && !freezed) {
             const first = this.getFastest();
             const second = this.anotherPlayer(first);
             first.useSpell();
@@ -37,7 +38,12 @@ class Fight {
                     p.sendSwapMenu(true);
                 }
                 else {
-                    p.sendMainMenu();
+                    if (!p.freezed) {
+                        p.sendMainMenu();
+                    }
+                    else {
+                        p.ready = true;
+                    }
                 }
             });
         }
@@ -72,6 +78,16 @@ class Fight {
             }
         }
     }
+    addGlobalEffect(user, target, effect) {
+        effect.use(user, target, this);
+    }
+    updateGlobalEffects() {
+        if (!this.fieldEffect)
+            return;
+        this.fieldEffect.duration -= 1;
+        if (this.fieldEffect.duration <= 0) {
+        }
+    }
     anotherPlayer(player) {
         if (player instanceof StandUser_1.StandUser) {
             return [this.p1, this.p2].filter(user => user != player)[0];
@@ -95,13 +111,12 @@ class Fight {
         const fields = [];
         for (const stand of stands) {
             fields.push({
-                name: stand.past.name + `(${stand.past.user.member.user.username})`,
+                name: stand.past.name + ` (${stand.past.user.member.user.username})`,
                 value: `HP: ${this.calcValue((_a = stand.past.status) === null || _a === void 0 ? void 0 : _a.hp, (_b = stand.before.status) === null || _b === void 0 ? void 0 : _b.hp)}\n 
                         Defence: ${this.calcValue((_c = stand.past.status) === null || _c === void 0 ? void 0 : _c.defence, (_d = stand.before.status) === null || _d === void 0 ? void 0 : _d.defence)}\n 
                         Speed: ${this.calcValue((_e = stand.past.status) === null || _e === void 0 ? void 0 : _e.speed, (_f = stand.before.status) === null || _f === void 0 ? void 0 : _f.speed)}\n 
                         Damage: ${this.calcValue((_g = stand.past.status) === null || _g === void 0 ? void 0 : _g.damage, (_h = stand.before.status) === null || _h === void 0 ? void 0 : _h.damage)}\n 
-                        Buff: ${(_j = stand.past.status) === null || _j === void 0 ? void 0 : _j.buff}\n 
-                        Effect: ${(_k = stand.past.status) === null || _k === void 0 ? void 0 : _k.effect}\n`,
+                        Effect: ${(_k = (_j = stand.past.status) === null || _j === void 0 ? void 0 : _j.effects) === null || _k === void 0 ? void 0 : _k.join()}\n`,
                 inline: true
             });
         }
@@ -133,6 +148,7 @@ class Fight {
             .setDescription(desc)
             .setThumbnail('https://media.discordapp.net/attachments/966392406662586458/1041374682072490045/unknown.png?width=649&height=618');
         this.sendBoth(emb);
+        this.mChannel.send({ embeds: [emb] });
         this.p1.collector.stop();
         this.p2.collector.stop();
     }

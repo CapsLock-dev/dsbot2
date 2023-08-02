@@ -44,14 +44,15 @@ exports.command = {
                             const everyone = member.guild.roles.cache.find(r => r.name === '@everyone');
                             const channel = yield member.guild.channels.create({
                                 name: member.user.username,
-                                parent: '1039149287524806688',
-                                permissionOverwrites: [{ id: everyone.id, deny: ['ViewChannel'] }, { id: member.id, allow: ['ViewChannel'] }]
+                                parent: '1046774338185076786',
+                                permissionOverwrites: [{ id: everyone.id, deny: ['ViewChannel'] }, { id: member.id, allow: ['ViewChannel', 'ManageChannels'] }]
                             });
-                            (0, db_1.addElementInv)(client.pool, member.id, 'channels', channel.id);
+                            //addElementInv(client.pool, member.id, 'channels', channel.id)
                             yield (0, db_1.updateBalance)(client.pool, member.id, (yield (0, db_1.getBalance)(client.pool, member.id)) - 6000);
                             i.reply({ content: 'Канал создан', ephemeral: true });
                         }
                         catch (e) {
+                            console.log(e);
                             i.reply({ content: 'Недостаточно прав', ephemeral: true });
                         }
                     }
@@ -62,10 +63,9 @@ exports.command = {
                 case 'arrow':
                     if ((yield (0, db_1.getBalance)(client.pool, member.id)) >= 10000) {
                         const userStands = yield (0, db_1.getStands)(client.pool, member.id);
-                        const stands = Object.keys(data_1.standList);
-                        stands.filter((standName => {
+                        const stands = Object.keys(data_1.standList).filter((standName => {
                             for (const stand of userStands) {
-                                if (stand.name === standName)
+                                if (stand.name == standName)
                                     return false;
                             }
                             return true;

@@ -22,8 +22,8 @@ exports.command = {
         const cd = client.cooldowns.get(interaction.member.user.id);
         if (!(cd === null || cd === void 0 ? void 0 : cd.findCooldown('bonus'))) {
             const balance = yield (0, db_1.getBalance)(client.pool, interaction.member.user.id);
-            (0, db_1.updateBalance)(client.pool, interaction.member.user.id, balance + 100);
-            interaction.reply('Вы получили бонус 100$');
+            (0, db_1.updateBalance)(client.pool, interaction.member.user.id, balance + 100000);
+            interaction.reply('Вы получили бонус 100000$');
             cd === null || cd === void 0 ? void 0 : cd.addCooldown('bonus', 3600);
         }
         else {

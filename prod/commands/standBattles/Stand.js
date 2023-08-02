@@ -1,15 +1,16 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AbilityType = exports.defaultValues = exports.SkillType = exports.StandStyle = exports.StandRole = exports.Stand = void 0;
+exports.AbilityType = exports.defaultValues = exports.DispelType = exports.EffectType = exports.SkillType = exports.StandStyle = exports.StandRole = exports.Stand = void 0;
 class Stand {
     startFight() {
         this.status = {
+            maxhp: this.maxhp,
             hp: this.maxhp,
             speed: this.speed,
             defence: this.defence,
+            evasion: 0,
             damage: this.damage,
-            effect: null,
-            buff: null,
+            effects: [],
             cooldowns: []
         };
     }
@@ -47,6 +48,50 @@ class Stand {
         }
         return 0;
     }
+    addCooldown(skill) {
+        var _a;
+        (_a = this.status) === null || _a === void 0 ? void 0 : _a.cooldowns.push({ skill: skill, cd: skill.cooldown });
+    }
+    removeCooldown(skill) {
+        this.status.cooldowns = this.status.cooldowns.filter(s => s.skill != skill);
+    }
+    removeAllCooldowns() {
+        this.status.cooldowns = [];
+    }
+    update() {
+        for (const entry of this.status.cooldowns) {
+            entry.cd -= 1;
+        }
+        for (const effect of this.status.effects) {
+            effect.duration -= 1;
+        }
+        this.status.cooldowns = this.status.cooldowns.filter(e => e.cd > 0);
+        this.status.effects = this.status.effects.filter(e => e.duration > 0);
+    }
+    hit(dmg, ignoreDef, canMiss) {
+        const evasion = this.status.evasion;
+        if (canMiss || evasion <= 0) {
+            if (Math.random() > evasion) {
+                this.editHp(-dmg, ignoreDef);
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+        else {
+            this.editHp(-dmg, ignoreDef);
+            return true;
+        }
+    }
+    addEffect(effect) {
+        var _a, _b;
+        (_b = (_a = this.status) === null || _a === void 0 ? void 0 : _a.effects) === null || _b === void 0 ? void 0 : _b.push(effect);
+        return true;
+    }
+    purgeEffects() {
+        this.status.effects = [];
+    }
     editHp(value, ignoreDef) {
         var _a;
         if (!ignoreDef) {
@@ -67,6 +112,7 @@ class Stand {
         else {
             this.status.defence += value;
         }
+        return true;
     }
     editDamage(value) {
         if (this.status.damage + value < 0) {
@@ -75,6 +121,7 @@ class Stand {
         else {
             this.status.damage += value;
         }
+        return true;
     }
     editSpeed(value) {
         if (this.status.speed + value < 0) {
@@ -83,6 +130,7 @@ class Stand {
         else {
             this.status.speed += value;
         }
+        return true;
     }
     getOwner(fight) {
         return fight.anotherPlayer(fight.anotherPlayer(this.ownerId));
@@ -113,6 +161,18 @@ var SkillType;
     SkillType[SkillType["Physical"] = 0] = "Physical";
     SkillType[SkillType["Special"] = 1] = "Special";
 })(SkillType = exports.SkillType || (exports.SkillType = {}));
+var EffectType;
+(function (EffectType) {
+    EffectType[EffectType["OnSwap"] = 0] = "OnSwap";
+    EffectType[EffectType["Once"] = 1] = "Once";
+    EffectType[EffectType["Periodic"] = 2] = "Periodic";
+})(EffectType = exports.EffectType || (exports.EffectType = {}));
+var DispelType;
+(function (DispelType) {
+    DispelType[DispelType["Normal"] = 0] = "Normal";
+    DispelType[DispelType["Strong"] = 1] = "Strong";
+    DispelType[DispelType["Death"] = 2] = "Death";
+})(DispelType = exports.DispelType || (exports.DispelType = {}));
 exports.defaultValues = {
     expPerLvl: 100,
     expPerLvlMultiplier: 100

@@ -13,8 +13,11 @@ exports.CooldownController = void 0;
 const discord_js_1 = require("discord.js");
 const pg_1 = require("pg");
 const pgClient = new pg_1.Pool({
-    connectionString: "postgres://capslock:yoTgozNCbDBV45QxX1MGwUDk6OIFDXkl@dpg-cetvv0pa6gdut0qrlovg-a.ohio-postgres.render.com/dsbot_db",
-    ssl: true,
+    user: "postgres",
+    host: "localhost",
+    database: "glbot",
+    password: "root",
+    port: 5432,
 });
 class CooldownController {
     constructor() {

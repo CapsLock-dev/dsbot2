@@ -11,8 +11,8 @@ export const command: Command = {
         const cd = client.cooldowns.get(interaction.member.user.id);
         if (!cd?.findCooldown('bonus')) {
             const balance = await getBalance(client.pool, interaction.member.user.id)
-            updateBalance(client.pool, interaction.member.user.id, balance + 100)
-            interaction.reply('Вы получили бонус 100$')
+            updateBalance(client.pool, interaction.member.user.id, balance + 100000)
+            interaction.reply('Вы получили бонус 100000$')
             cd?.addCooldown('bonus', 3600)
         } else {
             interaction.reply('Вы не можете сейчас получить бонус')

@@ -9,12 +9,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateStandTeam = exports.updateStand = exports.addStand = exports.getStands = exports.addElementInv = exports.getInventory = exports.removeUser = exports.getExp = exports.getLvl = exports.updateExp = exports.updateLvl = exports.updateBalance = exports.getBalance = exports.addUser = void 0;
+exports.updateStandTeam = exports.updateStand = exports.addStand = exports.getTeamStands = exports.getStands = exports.addElementInv = exports.getInventory = exports.removeUser = exports.getExp = exports.getLvl = exports.updateExp = exports.updateLvl = exports.updateBalance = exports.getBalance = exports.addUser = void 0;
 const Inventory_1 = require("../commands/classes/Inventory");
 const data_1 = require("../commands/standBattles/data");
 function addUser(pool, id) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield pool.query(`INSERT INTO users (id, balance, inventory) VALUES (${id}, 150, ARRAY['']) ON CONFLICT DO NOTHING`);
+        yield pool.query(`INSERT INTO users (lvl, exp, id, balance, openedStands, inventory) VALUES (1, 0, ${id}, 150, ARRAY[]::INTEGER[], ARRAY[]::TEXT[]) ON CONFLICT DO NOTHING`);
     });
 }
 exports.addUser = addUser;
@@ -66,10 +66,6 @@ exports.removeUser = removeUser;
 function getInventory(pool, id) {
     return __awaiter(this, void 0, void 0, function* () {
         let result = yield pool.query(`SELECT inventory FROM users WHERE id='${id}'`);
-        if (!result.rows[0].inventory) {
-            yield pool.query(`UPDATE users SET inventory=ARRAY[['']] WHERE id='${id}'`);
-            result = yield pool.query(`SELECT inventory FROM users WHERE id='${id}'`);
-        }
         return new Inventory_1.Inventory(result.rows[0].inventory);
     });
 }
@@ -79,12 +75,7 @@ function addElementInv(pool, id, type, element) {
         const inv = (yield getInventory(pool, id));
         element = type + ":" + element;
         inv.push(element);
-        let str = '[';
-        for (let i = 0; i < inv.array.length - 1; i++) {
-            str += i + 1 >= inv.array.length ? "'" + inv.array[i] + "'" : "'" + inv.array[i] + "',";
-        }
-        str += ']';
-        yield pool.query(`UPDATE users SET inventory=ARRAY${str} WHERE id='${id}'`);
+        yield pool.query("UPDATE users SET inventory=$1 WHERE id=$2", [inv.array, id.toString()]);
     });
 }
 exports.addElementInv = addElementInv;
@@ -99,21 +90,32 @@ function getStands(pool, id) {
     });
 }
 exports.getStands = getStands;
+function getTeamStands(pool, id) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const stands = yield pool.query(`SELECT * FROM stands WHERE user_id='${id}' AND team=true`);
+        const array = [];
+        for (const stand of stands.rows) {
+            array.push(new data_1.standList[stand.name](stand.maxhp, stand.lvl, stand.exp, stand.speed, stand.defence, stand.damage, stand.expPerLvl, stand.userSkills));
+        }
+        return array;
+    });
+}
+exports.getTeamStands = getTeamStands;
 function addStand(pool, id, stand) {
     return __awaiter(this, void 0, void 0, function* () {
         let team = true;
-        if ((yield getStands(pool, id)).length >= 5) {
+        if ((yield getTeamStands(pool, id)).length >= 5) {
             team = false;
         }
         yield pool.query(`INSERT INTO stands (user_id, name, maxhp, lvl, exp, speed, defence, damage, expPerLvl, usedSkills, team) VALUES ` +
-            `(${id}, '${stand.name}', ${stand.maxhp}, ${stand.lvl}, ${stand.exp}, ${stand.speed}, ${stand.defence}, ${stand.damage}, ${stand.expPerLvl}, ARRAY${skillsToArray(stand.usedSkills)}, ${team})`);
+            `(${id}, '${stand.name}', ${stand.maxhp}, ${stand.lvl}, ${stand.exp}, ${stand.speed}, ${stand.defence}, ${stand.damage}, ${stand.expPerLvl}, ARRAY[${skillsToName(stand.usedSkills)}], ${team})`);
     });
 }
 exports.addStand = addStand;
 function updateStand(pool, id, stand) {
     return __awaiter(this, void 0, void 0, function* () {
         yield pool.query(`UPDATE stands SET (user_id, name, maxhp, lvl, exp, speed, defence, damage, expPerLvl, usedSkills, team) ` +
-            `(${stand.maxhp}, ${stand.lvl}, ${stand.exp}, ${stand.speed}, ${stand.defence}, ${stand.damage}, ${stand.expPerLvl}, ${skillsToArray(stand.usedSkills)}) ` +
+            `(${stand.maxhp}, ${stand.lvl}, ${stand.exp}, ${stand.speed}, ${stand.defence}, ${stand.damage}, ${stand.expPerLvl}, ARRAY[${skillsToName(stand.usedSkills)}]) ` +
             `WHERE user_id='${id}' AND name=${stand.name}`);
     });
 }
@@ -124,15 +126,9 @@ function updateStandTeam(pool, id, name, team) {
     });
 }
 exports.updateStandTeam = updateStandTeam;
-function skillsToArray(skills) {
-    let str = '[';
-    for (let i = 0; i <= skills.length - 1; i++) {
-        str += "'" + (i + 1 >= skills.length ? skills[i].name : skills[i].name) + "'";
-        if (i + 1 <= skills.length - 1) {
-            str += ',';
-        }
-    }
-    str += ']';
-    console.log(str);
-    return str;
+function skillsToName(skills) {
+    const skillNames = skills.map(skill => {
+        return `'${skill.name}'`;
+    });
+    return skillNames;
 }

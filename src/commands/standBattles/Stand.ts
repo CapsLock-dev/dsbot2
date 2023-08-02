@@ -1,6 +1,7 @@
 import { Fight } from "./Fight"
 import { StandUser } from "./StandUser"
 import { standList } from "./data"
+import { Effect } from './effects/effects'
 
 export abstract class Stand {
     name!: keyof typeof standList
@@ -18,6 +19,8 @@ export abstract class Stand {
     ability!: Ability
     infoForAi!: InfoForAi
     ownerId!: string
+    image!: string
+    chargingSkill!: ChargingSkill | undefined
     startFight() {
         this.status = {
             maxhp: this.maxhp,
@@ -62,6 +65,28 @@ export abstract class Stand {
         } 
         return 0
     }
+    addCooldown(skill: Skill) {
+        this.status?.cooldowns.push({skill: skill, cd: skill.cooldown})
+    }
+    removeCooldown(skill: Skill) {
+        this.status!.cooldowns = this.status!.cooldowns.filter(s => s.skill != skill)
+    }
+    removeAllCooldowns() {
+        this.status!.cooldowns = []
+    }
+    update() {
+        for (const entry of this.status!.cooldowns) {
+            entry.cd -= 1
+        }
+        for (const effect of this.status!.effects as Effect[]) {
+            effect.duration -= 1
+        }
+        this.status!.cooldowns = this.status!.cooldowns.filter(e => e.cd > 0)
+        this.status!.effects  = this.status!.effects!.filter(e => e.duration > 0)
+        if (this.chargingSkill) {
+            this.chargingSkill.time -= 1
+        }
+    }
     hit(dmg: number, ignoreDef: boolean, canMiss: boolean) {
         const evasion = this.status!.evasion
         if (canMiss || evasion <= 0) {
@@ -81,7 +106,7 @@ export abstract class Stand {
         return true
     }
     purgeEffects() {
-
+        this.status!.effects = []
     }
     editHp(value: number, ignoreDef: boolean) {
         if (!ignoreDef) {
@@ -142,6 +167,11 @@ export interface InfoForAi {
     readonly style: StandStyle
 }
 
+export interface ChargingSkill {
+    readonly Skill: (fight: Fight, stand: Stand, self: Stand)=>boolean
+    time: number
+}
+
 export enum StandRole {
     Support, Tank, Carry
 }
@@ -156,34 +186,18 @@ export enum StandStyle {
     Exchange
 }
 
-export interface Effect {
-    readonly name: string
-    duration: number
-    use: (target: Stand, fight: Fight)=>void
-    end: (target: Stand, fight: Fight)=>void
-    description: string
-    preventSwap: boolean
-}
-
-export interface GlobalEffect {
-    readonly name: string
-    duration: number
-    user: StandUser
-    use: (user: Stand, enemy: Stand, fight: Fight)=>void
-    end: (user: Stand, enemy: Stand ,fight: Fight)=>void
-    description: string
-    preventSwap: boolean
-}
-
 export interface Skill {
     readonly name: string
     readonly cooldown: number
-    readonly use: (fight: Fight, stand: Stand, self: Stand)=>boolean,
+    readonly use: (fight: Fight, stand: Stand, self: Stand)=>boolean
     readonly description: string
     readonly type: SkillType
     readonly damage: number
     readonly target?: boolean
     readonly counterAttack?: boolean
+    readonly gif?: string
+    readonly charging?: boolean
+    readonly useCharged?: (fight: Fight, stand: Stand, self: Stand)=>boolean
 }
 
 export enum SkillType {

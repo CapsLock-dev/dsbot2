@@ -4,7 +4,7 @@ exports.Inventory = void 0;
 class Inventory {
     constructor(array) {
         this.array = [];
-        this.array = array;
+        this.array = array.filter(val => val != '');
     }
     filterArray(filter) {
         filter += ':';

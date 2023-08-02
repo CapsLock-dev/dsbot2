@@ -17,12 +17,12 @@ class StandUser {
         this.chosenSpell = null;
         this.chosenStand = null;
         this.chosenMove = 'Idle';
-        this.freezed = 0;
+        this.freezed = false;
         this.member = member;
         this.stands = stands;
         this.fight = fight;
         this.dm = dm;
-        this.collector = dm.createMessageComponentCollector();
+        this.collector = dm.createMessageComponentCollector({});
         this.collector.on('collect', (i) => __awaiter(this, void 0, void 0, function* () {
             this.menuHandler(i);
         }));
@@ -56,6 +56,7 @@ class StandUser {
         var _a, _b;
         switch (i.componentType) {
             case discord_js_1.ComponentType.Button:
+                this.message.delete();
                 switch (i.customId) {
                     case 'attack':
                         this.sendAttackMenu();
@@ -141,7 +142,8 @@ class StandUser {
                 options.push({ label: skill.name, description: `КД: ${stand.getCooldown(skill)}`, value: i.toString() });
             }
             const emb = new discord_js_1.EmbedBuilder()
-                .setTitle('Атака');
+                .setTitle('Атака')
+                .setThumbnail('https://media.discordapp.net/attachments/966392406662586458/1041374682072490045/unknown.png?width=649&height=618');
             const menu = new discord_js_1.ActionRowBuilder()
                 .addComponents(new discord_js_1.SelectMenuBuilder()
                 .setCustomId('attack_menu')
@@ -156,7 +158,8 @@ class StandUser {
         return __awaiter(this, void 0, void 0, function* () {
             const emb = new discord_js_1.EmbedBuilder()
                 .setTitle('Битва')
-                .setDescription('Выберите действие');
+                .setDescription('Выберите действие')
+                .setThumbnail('https://media.discordapp.net/attachments/966392406662586458/1041374682072490045/unknown.png?width=649&height=618');
             const buttons = new discord_js_1.ActionRowBuilder()
                 .addComponents(new discord_js_1.ButtonBuilder()
                 .setCustomId('attack')
@@ -172,24 +175,28 @@ class StandUser {
         });
     }
     useSpell() {
-        var _a, _b;
+        var _a, _b, _c, _d, _e;
         if (this.chosenStand.status.hp > 0) {
             const sBuff = this.fight.standBuffer();
             const target = this.fight.anotherPlayer(this).chosenStand;
             let message = '';
-            this.chosenSpell.use(this.fight, target, this.chosenStand);
-            message += `${(_a = this.chosenStand) === null || _a === void 0 ? void 0 : _a.name} использовал ${(_b = this.chosenSpell) === null || _b === void 0 ? void 0 : _b.name}`;
+            const success = this.chosenSpell.use(this.fight, target, this.chosenStand);
+            message += `${(_a = this.chosenStand) === null || _a === void 0 ? void 0 : _a.name} (${target.user.member.user.username}) использовал ${(_b = this.chosenSpell) === null || _b === void 0 ? void 0 : _b.name}`;
+            if (!success) {
+                message += `\n ${this.chosenSpell.name} не сработал`;
+            }
             if (target.status.hp <= 0) {
-                message += `\n ${target.name} умер`;
+                message += `\n ${target.name} (${target.user.member.user.username}) умер`;
             }
             this.fight.sendBattleLog(message, sBuff.stand1, sBuff.stand2);
+            if (this.chosenSpell.cooldown > 0) {
+                (_d = (_c = this.chosenStand) === null || _c === void 0 ? void 0 : _c.status) === null || _d === void 0 ? void 0 : _d.cooldowns.push({ skill: this.chosenSpell, cd: (_e = this.chosenSpell) === null || _e === void 0 ? void 0 : _e.cooldown });
+            }
         }
     }
     update() {
         for (const stand of this.stands.filter(s => s.status.hp > 0)) {
-            for (const entry of stand.status.cooldowns) {
-                entry.cd -= 1;
-            }
+            stand.update();
         }
         this.chosenSpell = null;
         this.chosenMove = "Idle";

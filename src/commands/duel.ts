@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, GuildMember, ComponentType, EmbedBuilder, TextBasedChannel } from "discord.js"
+import { SlashCommandBuilder, ChatInputCommandInteraction, GuildMember, ComponentType, EmbedBuilder, TextBasedChannel, TextChannel } from "discord.js"
 import { Command } from "../interfaces"
 import { getStands } from "../db"
 import { Fight } from "./standBattles/Fight"
@@ -13,6 +13,6 @@ export const command: Command = {
         const member = interaction.member as GuildMember
         const dm1 = await member.createDM()
         const dm2 = await opponent.createDM()
-        new Fight(interaction.channel as TextBasedChannel,member, await getStands(client.pool, member.id), dm1, opponent, await getStands(client.pool, opponent.id), dm2)
+        new Fight(interaction.channel as TextChannel,member, await getStands(client.pool, member.id), dm1, opponent, await getStands(client.pool, opponent.id), dm2)
     }
 }

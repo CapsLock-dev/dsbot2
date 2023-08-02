@@ -12,14 +12,14 @@ export class StandUser {
     chosenSpell: Skill | null = null
     chosenStand: Stand | null = null
     chosenMove: 'Skill' | 'Swap' | 'Run' | 'Idle' = 'Idle'
-    freezed: number = 0
+    freezed: boolean = false
     message!: Message
     constructor(member: GuildMember, stands: Stand[], dm: DMChannel, fight: Fight) {
         this.member = member
         this.stands = stands
         this.fight = fight
         this.dm = dm
-        this.collector = dm.createMessageComponentCollector()
+        this.collector = dm.createMessageComponentCollector({}) as InteractionCollector<ButtonInteraction<CacheType> | SelectMenuInteraction<CacheType>>
         this.collector.on('collect', async (i: ButtonInteraction | SelectMenuInteraction) => {
             this.menuHandler(i)
         })
@@ -123,14 +123,14 @@ export class StandUser {
         this.message = await this.dm.send({ components: [menu], embeds: [emb] })
     }
     async run() {
-       this.fight.end('run', this) 
+        this.fight.end('run', this)
     }
     async sendAttackMenu() {
         const options = []
         const stand = this.chosenStand as Stand
         for (let i = 0; i < stand.usedSkills.length; i++) {
             const skill = stand.usedSkills[i]
-            options.push({label: skill.name, description: `КД: ${stand.getCooldown(skill)}`, value: i.toString()})
+            options.push({ label: skill.name, description: `КД: ${stand.getCooldown(skill)}`, value: i.toString() })
         }
         const emb = new EmbedBuilder()
             .setTitle('Атака')
@@ -144,7 +144,7 @@ export class StandUser {
                     .setPlaceholder('Выберите скилл')
                     .addOptions(options)
             )
-        this.message = await this.dm.send({ embeds: [emb], components: [menu]}) 
+        this.message = await this.dm.send({ embeds: [emb], components: [menu] })
     }
     async sendMainMenu() {
         const emb = new EmbedBuilder()
@@ -174,23 +174,42 @@ export class StandUser {
             const target = this.fight.anotherPlayer(this).chosenStand as Stand
             let message = ''
             const success = this.chosenSpell!.use(this.fight, target, this.chosenStand as Stand)
+            if (this.chosenSpell?.charging) {
+                message += `${this.chosenStand?.name} (${target.user.member.user.username}) готовит ${this.chosenSpell?.name}`
+            } else {
+                message += `${this.chosenStand?.name} (${target.user.member.user.username}) использовал ${this.chosenSpell?.name}`
+            }
+            if (!success) {
+                message += `\n ${this.chosenSpell!.name} не сработал`
+            }
+            if (target.status!.hp <= 0) {
+                message += `\n ${target.name} (${target.user.member.user.username}) умер`
+            }
+            this.fight.sendBattleLog(message, this.chosenSpell?.gif, sBuff.stand1, sBuff.stand2)
+            if (this.chosenSpell!.cooldown > 0) {
+                this.chosenStand?.status?.cooldowns.push({ skill: this.chosenSpell as Skill, cd: this.chosenSpell?.cooldown as number })
+            }
+        }
+    }
+    useChargedSpell() {
+        if (this.chosenStand!.status!.hp > 0) {
+            const sBuff = this.fight.standBuffer()
+            const target = this.fight.anotherPlayer(this).chosenStand as Stand
+            const spell = this.chosenStand!.chargingSkill!.Skill
+            let message = ''
+            const success = spell(this.fight, target, this.chosenStand as Stand)
             message += `${this.chosenStand?.name} (${target.user.member.user.username}) использовал ${this.chosenSpell?.name}`
             if (!success) {
                 message += `\n ${this.chosenSpell!.name} не сработал`
             }
             if (target.status!.hp <= 0) {
-                message += `\n ${target.name} (${target.user.member.user.username}) умер`           
+                message += `\n ${target.name} (${target.user.member.user.username}) умер`
             }
-            this.fight.sendBattleLog(message, sBuff.stand1, sBuff.stand2)
+            this.fight.sendBattleLog(message, this.chosenSpell?.gif, sBuff.stand1, sBuff.stand2)
         }
     }
     update() {
-        for (const stand of this.stands.filter(s => s.status!.hp > 0)) {
-            for (const entry of stand.status!.cooldowns) {
-                entry.cd -= 1 
-            }
-        }
-        this.chosenSpell = null
+        if (!this.chosenSpell?.charging) this.chosenSpell = null
         this.chosenMove = "Idle"
     }
 }

@@ -1,7 +1,7 @@
 export class Inventory {
     array: string[] = []
     constructor(array: string[]) {
-        this.array = array
+        this.array = array.filter(val => val != '')
     }
     filterArray(filter: PossibleItems) {
         filter += ':'

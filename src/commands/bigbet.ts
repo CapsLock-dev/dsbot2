@@ -10,54 +10,96 @@ export const command: Command = {
     exec: async (client, interaction: ChatInputCommandInteraction) => {
         const userList: string[] = []
         const betValue = interaction.options.getInteger('value', true)
+        const author = interaction.member as GuildMember
         let prize = betValue
-        if (await getBalance(client.pool, interaction.member?.user.id as string) < betValue) {
+        let balance = await getBalance(client.pool, author.id)
+        if (balance < betValue) {
             interaction.reply({ content: 'У вас недостаточно средств', ephemeral: true })
             return
         }
-        updateBalance(client.pool, interaction.member?.user.id as string, await getBalance(client.pool, interaction.member?.user.id as string) - betValue)
+        userList.push(author.id)
+        updateBalance(client.pool, author.id, balance - betValue)
         const row: any = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId('accept')
-                    .setLabel('Bet')
+                    .setLabel('Сделать ставку')
                     .setStyle(ButtonStyle.Success),
                 new ButtonBuilder()
                     .setCustomId('start')
-                    .setLabel('Запустить')
-                    .setStyle(ButtonStyle.Success)
+                    .setLabel('Начать')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('cancel')
+                    .setLabel('Отменить')
+                    .setStyle(ButtonStyle.Danger),
             )
         const emb = new EmbedBuilder()
             .setTitle('Big Bet')
-            .setDescription('Участники: ' + userList.join(', '))
+            .setDescription('Участники: ' + userList.map(id => { return `<@${id}>` }).join(', '))
             .setFields([{ name: 'Ставка: ', value: `${betValue}` }, { name: 'Выигрыш', value: prize.toString() }])
+            .setColor("#dacaa4")
         const message = await interaction.reply({ embeds: [emb], components: [row], fetchReply: true })
-        const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, max: 1 })
+        const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, time: 60000 * 5 })
         collector.on('collect', async i => {
-            if (userList.includes(i.member?.user.id as string)) return
+            if (!i.member) return
+            const member = i.member as GuildMember
+            balance = await getBalance(client.pool, member.id)
             switch (i.customId) {
                 case 'accept':
-                    if (await getBalance(client.pool, i.member?.user.id as string) >= betValue) {
-                        userList.push(i.member?.user.id as string)
+                    if (userList.find(id => id == member.id)) {
+                        await i.reply({ content: 'Вы уже участвуете', ephemeral: true })
+                        break
+                    }
+                    if (balance >= betValue) {
+                        userList.push(`${member.id}`)
                         prize += betValue
                         const emb = new EmbedBuilder()
                             .setTitle('Big Bet')
-                            .setDescription('Участники: ' + userList.join(', '))
+                            .setDescription('Участники: ' + userList.map(id => { return `<@${id}>` }).join(', '))
                             .setFields([{ name: 'Ставка: ', value: `${betValue}` }, { name: 'Выигрыш', value: prize.toString() }])
-                        updateBalance(client.pool, i.member?.user.id as string, await getBalance(client.pool, i.member?.user.id as string) - betValue)
+                            .setColor("#dacaa4")
+                        await updateBalance(client.pool, member.id, balance - betValue)
+                        i.deferUpdate()
                         message.edit({ embeds: [emb], components: [row] })
                     } else {
-                        i.reply({ content: 'У вас недостаточно средств', ephemeral: true })
+                        await i.reply({ content: 'У вас недостаточно средств', ephemeral: true })
                     }
                     break;
 
                 case 'start':
-                    if (interaction.user.id === i.member?.user.id) {
+                    if (member.id == author.id) {
                         const winner = userList[Math.floor(Math.random() * userList.length)]
-                        i.reply(`${interaction.guild?.members.cache.find(u => u.id === winner)?.user.username} выиграл ${prize}`)
+                        const emb = new EmbedBuilder()
+                            .setTitle('Big Bet')
+                            .setDescription('Участники: ' + userList.map(id => { return `<@${id}>` }).join(', '))
+                            .setFields([{ name: 'Ставка: ', value: `${betValue}` }, { name: 'Выигрыш', value: prize.toString() }, 
+                                        {name: 'Выиграл: ', value: `<@${winner}>`}])
+                            .setColor("#dacaa4")
+                        i.deferUpdate()
+                        message.edit({ embeds: [emb] })
+                        await updateBalance(client.pool, winner, balance + prize)
+                        collector.stop()
+                    } else {
+                        await i.reply({ content: 'Вы не можете начать, т.к вы не создатель ставки', ephemeral: true })
                     }
                     break;
+                case 'cancel':
+                    if (member.id == author.id) {
+                        await message.edit({ content: 'Отменено', embeds: [], components: [] })
+                        userList.forEach(async id => {
+                            const balance = await getBalance(client.pool, id)
+                            await updateBalance(client.pool, id, balance + betValue)
+                        })
+                        collector.stop()
+                    } else {
+                        await i.reply({ content: 'Вы не можете начать, т.к вы не создатель ставки', ephemeral: true })
+                    }
+                    break
             }
+        })
+        collector.on('end', async (i) => {
+            message.edit({components: []})
         })
     }
 }

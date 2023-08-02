@@ -1,7 +1,7 @@
 import { Skill, SkillType, StandRole, StandStyle, AbilityType, Stand } from "../Stand";
 import { Fight } from "../Fight"
 
-export class Starplatinum extends Stand{
+export class StarPlatinum extends Stand{
     constructor(maxhp: number=115, lvl: number=1, exp: number=0, speed: number=5, defence: number=15, damage: number=20, expPerLvl: number=100, usedSkills: string[]=[]) {
         super()
         this.maxhp = maxhp
@@ -13,7 +13,7 @@ export class Starplatinum extends Stand{
         this.damage = damage
         this.expPerLvl = expPerLvl
         this.skills = new Map<Number, Skill[]>([])
-        this.ability = { type: AbilityType.Passive, name: 'Rapier', description: 'Все атаки пробивают броню', use: undefined, active: true }
+        this.ability = { type: AbilityType.Passive, name: 'Block', description: 'Все атаки пробивают броню', use: undefined, active: true }
         this.infoForAi = { 'counterStands': [], 'role': StandRole.Carry, 'style': StandStyle.DamageDealer }
         this.setup()
         this.setupSkills(usedSkills)
@@ -26,6 +26,7 @@ export class Starplatinum extends Stand{
                 'type': SkillType.Physical,
                 'cooldown': 0,
                 'use': this.ora_ora_ora,
+                'gif': 'https://tenor.com/view/ora-star-platinum-jo-jos-bizarre-adventure-jojo-gif-5505650',
                 damage: 1,
             },
             {
@@ -34,6 +35,7 @@ export class Starplatinum extends Stand{
                 'type': SkillType.Special,
                 'cooldown': 3,
                 'use': this.time_stop,
+		        'gif': 'https://tenor.com/view/star-platinum-za-warduo-gif-26209527',
                 damage: 0,
             },
             {
@@ -42,6 +44,7 @@ export class Starplatinum extends Stand{
                 'type': SkillType.Physical,
                 'cooldown': 0,
                 'use': this.starfinger,
+                'gif': 'https://tenor.com/view/star-finger-long-fingers-star-platinum-jojo-bizzare-adventure-stardust-crusaders-gif-23788395',
                 damage: 1,
             },
             {
